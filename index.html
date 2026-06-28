@@ -63,6 +63,17 @@
   #c-left{margin-bottom:8px;}
   #c-right{margin-top:auto;}
   #cricktable{margin-top:2px;}
+  .crick{width:100%;border-collapse:separate;border-spacing:0;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;}
+  .crick th,.crick td{padding:9px 6px;text-align:center;border-bottom:1px solid var(--line);}
+  .crick tr:last-child th,.crick tr:last-child td{border-bottom:none;}
+  .crick th{color:var(--muted);font-weight:700;font-size:12px;background:rgba(255,255,255,.025);}
+  .crick .numc{font-weight:800;color:var(--champ-bright);font-size:15px;width:52px;}
+  .crick td:not(.numc){font-size:18px;letter-spacing:3px;font-weight:800;}
+  .crick tr:last-child td{font-size:16px;background:rgba(230,204,126,.06);}
+  .crick tr:last-child .numc{color:var(--muted);font-size:12px;}
+  .mko{color:var(--grey);}
+  .mkc{color:var(--green);text-shadow:0 0 9px rgba(70,201,138,.55);}
+  .mkdot{color:#39414c;}
   .turnbar{display:flex;gap:5px;margin-bottom:8px;flex-wrap:wrap;}
   .tb{flex:1;min-width:64px;text-align:center;padding:7px 3px;border-radius:9px;background:var(--card);border:1px solid var(--line);}
   .tb .nm{font-size:10px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -143,7 +154,7 @@
     <div class="spacer"></div>
     <button id="installBtn" class="btn install" style="display:none;" onclick="installApp()">⤓ Installer l'app sur l'écran d'accueil</button>
     <div id="lastGame" class="muted" style="text-align:center;margin-top:10px;"></div>
-    <div class="muted" style="text-align:center;font-size:10px;opacity:.5;margin-top:6px;">v1.3</div>
+    <div class="muted" style="text-align:center;font-size:10px;opacity:.5;margin-top:6px;">v1.3.1</div>
   </section>
 
   <!-- SETTINGS -->
@@ -654,7 +665,7 @@ function renderGame(){
 }
 function escapeHtml(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 /* ============ CRICKET RENDER ============ */
-function cricketGlyph(m){if(m<=0)return '<span style="color:var(--grey)">·</span>';
+function cricketGlyph(m){if(m<=0)return '<span class="mkdot">–</span>';
   const cls=m>=3?'mkc':'mko';return `<span class="${cls}">${'✗'.repeat(m)}</span>`;}
 function renderCricket(){
   const st=cricketCompute(true);const pos=currentPos();const p=curPlayer();
