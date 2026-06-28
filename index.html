@@ -139,6 +139,24 @@
   .dot-on{width:9px;height:9px;border-radius:50%;background:var(--green);display:inline-block;margin-right:6px;box-shadow:0 0 8px rgba(70,201,138,.6);}
   .remlock .mods,.remlock .numgrid,.remlock .act-row{opacity:.3;pointer-events:none;filter:grayscale(.3);}
   .rembadge{display:inline-block;font-size:11px;color:var(--champ-bright);border:1px solid var(--champ-deep);border-radius:8px;padding:2px 8px;margin-left:6px;}
+  /* camera */
+  #game.hascam .gamewrap,#cricket.hascam .cricketwrap{padding-bottom:62px;}
+  #camControls{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(8px + env(safe-area-inset-bottom));z-index:60;display:none;gap:8px;align-items:center;background:rgba(10,12,16,.85);border:1px solid var(--line);border-radius:999px;padding:6px 10px;}
+  #camControls .cbtn{width:40px;height:40px;border-radius:50%;background:var(--card);border:1px solid var(--line);font-size:16px;display:flex;align-items:center;justify-content:center;color:var(--txt);cursor:pointer;}
+  #camControls .cbtn.off{background:#5b2330;border-color:#7a2f3f;}
+  #camControls .cbtn.red{background:#d8463f;border-color:#d8463f;}
+  #camControls .cbtn.wide{width:auto;padding:0 12px;border-radius:20px;font-size:13px;font-weight:700;color:var(--champ-bright);}
+  .rtcstatus{font-size:11px;color:var(--muted);padding:0 4px;white-space:nowrap;}
+  #camBig{position:fixed;inset:0;z-index:50;background:#000;display:none;align-items:center;justify-content:center;}
+  #camBigVideo{width:100%;height:100%;object-fit:cover;}
+  .camscore{position:absolute;top:calc(10px + env(safe-area-inset-top));right:10px;background:rgba(0,0,0,.55);border:1px solid var(--line);border-radius:10px;padding:7px 10px;font-size:12px;text-align:right;color:#fff;line-height:1.5;}
+  .camscore b{color:var(--champ-bright);}
+  .camdarts{position:absolute;bottom:78px;left:50%;transform:translateX(-50%);display:flex;gap:8px;}
+  .camdarts .cdot{min-width:46px;height:42px;border-radius:10px;background:rgba(0,0,0,.6);border:1px solid var(--champ-deep);display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--champ-bright);font-size:15px;}
+  .camtag{position:absolute;top:calc(10px + env(safe-area-inset-top));left:10px;background:rgba(0,0,0,.55);padding:4px 9px;border-radius:8px;font-size:12px;color:#fff;}
+  #camThumb{position:fixed;right:10px;bottom:64px;width:104px;height:140px;z-index:55;border-radius:12px;overflow:hidden;border:1px solid var(--champ-deep);background:#111;display:none;cursor:pointer;}
+  #camThumbVideo{width:100%;height:100%;object-fit:cover;}
+  .thumblabel{position:absolute;bottom:4px;left:6px;font-size:10px;color:#fff;background:rgba(0,0,0,.5);padding:1px 5px;border-radius:6px;}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -162,7 +180,7 @@
     <div class="spacer"></div>
     <button id="installBtn" class="btn install" style="display:none;" onclick="installApp()">⤓ Installer l'app sur l'écran d'accueil</button>
     <div id="lastGame" class="muted" style="text-align:center;margin-top:10px;"></div>
-    <div class="muted" style="text-align:center;font-size:10px;opacity:.5;margin-top:6px;">v1.4.1</div>
+    <div class="muted" style="text-align:center;font-size:10px;opacity:.5;margin-top:6px;">v1.5</div>
   </section>
 
   <!-- SETTINGS -->
@@ -346,6 +364,12 @@
       <button class="btn sec" id="shareBtn" style="width:auto;display:inline-block;padding:9px 16px;margin-top:6px;" onclick="shareCode()">🔗 Partager / Copier</button>
     </div>
     <div id="hostConfig" style="display:none;margin-top:12px;">
+      <div class="field-label">Mode</div>
+      <div class="row" data-group="rmedia">
+        <div class="chip on" data-val="none">📊 Sans caméra</div>
+        <div class="chip" data-val="video">🎥 Caméra + micro</div>
+        <div class="chip" data-val="audio">🎙️ Micro seul</div>
+      </div>
       <div class="field-label">Type de jeu</div>
       <div class="row" data-group="rtype">
         <div class="chip on" data-val="501">501</div>
@@ -377,6 +401,26 @@
     <div id="lobbyWait" class="muted" style="text-align:center;margin-top:8px;"></div>
   </section>
 
+  <!-- CAMERA -->
+  <div id="camBig">
+    <video id="camBigVideo" autoplay playsinline muted></video>
+    <div class="camtag" id="camBigTag"></div>
+    <div class="camscore" id="camScore"></div>
+    <div class="camdarts" id="camDarts"></div>
+  </div>
+  <div id="camThumb" onclick="toggleCamView()">
+    <video id="camThumbVideo" autoplay playsinline muted></video>
+    <span class="thumblabel" id="camThumbLabel"></span>
+  </div>
+  <div id="camControls">
+    <button id="micBtn" class="cbtn" onclick="toggleMic()" title="Micro">🎤</button>
+    <button id="camBtn" class="cbtn" onclick="toggleCam()" title="Caméra">📷</button>
+    <button id="camToggleBtn" class="cbtn wide" onclick="toggleCamView()" style="display:none;">📊 Voir le jeu</button>
+    <span id="rtcStatus" class="rtcstatus"></span>
+    <button class="cbtn red" onclick="leaveRoom();go('home')" title="Quitter">📞</button>
+  </div>
+  <audio id="remoteAudio" autoplay></audio>
+
   <div id="toast" class="toast"></div>
 </div>
 
@@ -395,7 +439,7 @@ function logoSVG(g){g=g||'#E6CC7E';
 /* ============ STATE ============ */
 const COLORS=['#E6CC7E','#7fb2ff','#46c98a','#ff8f6b','#a98bff','#ff6fae','#5ad0d0','#ffd23f'];
 let roster=loadRoster();          // [{name,color}]
-let settings={gameType:'x01',start:501,out:'simple',cmode:'standard',turns:'illimite',maxTurns:20,order:'random',bot:false,botLevel:'confirme'};
+let settings={gameType:'x01',start:501,out:'simple',cmode:'standard',turns:'illimite',maxTurns:20,order:'random',bot:false,botLevel:'confirme',media:'none'};
 let G=null;                        // active game
 
 function uid(){return 'p_'+Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4);}
@@ -526,6 +570,7 @@ document.querySelectorAll('[data-group]').forEach(grp=>{
       if(g==='level')settings.botLevel=v;
       if(g==='rturns'){settings.turns=v;document.getElementById('rTurnsStepper').style.display=v==='limite'?'flex':'none';}
       if(g==='rorder')settings.order=v;
+      if(g==='rmedia')settings.media=v;
       if(document.getElementById('lobby').classList.contains('on'))renderLobby();
     });
   });
@@ -583,7 +628,7 @@ function startGame(){
      committed:[], current:[], mod:1, finished:false, winnerPos:null, endReason:null};
   go(G.type==='cricket'?'cricket':'game');render();maybeBotTurn();
 }
-function render(){if(G&&G.type==='cricket')renderCricket();else renderGame();remotePush();}
+function render(){if(G&&G.type==='cricket')renderCricket();else renderGame();if(remoteActive&&G&&G.media&&G.media!=='none')updateMediaView();remotePush();}
 /* ============ CRICKET ENGINE (Étape 3) ============ */
 const CRICKET_TARGETS=[20,19,18,17,16,15,25];
 function cricketCompute(includeCurrent){
@@ -907,7 +952,7 @@ function renderRemote(){document.getElementById('rName').value=localStorage.getI
 function myPosIdx(){return (G&&G.order)?G.order.findIndex(pi=>G.players[pi].id===myId):-1;}
 function remoteLocked(){return remoteActive&&G&&G.remote&&!G.finished&&currentPos()!==myPosIdx();}
 function remotePush(){if(remoteActive&&!applyingRemote&&chan&&G){try{chan.send({type:'broadcast',event:'state',payload:G});}catch(e){}}}
-function leaveRoom(){try{if(chan){const s=getSupa();if(s)s.removeChannel(chan);}}catch(e){}chan=null;remoteActive=false;isHost=false;roomCode='';if(G&&G.remote)G=null;}
+function leaveRoom(){stopMedia();try{if(chan){const s=getSupa();if(s)s.removeChannel(chan);}}catch(e){}chan=null;remoteActive=false;isHost=false;roomCode='';if(G&&G.remote)G=null;}
 function openRoom(code,host){
   const s=getSupa();
   if(!s){toast('Connexion impossible — vérifie ta connexion internet.');document.getElementById('remoteMsg').textContent='Le mode à distance nécessite internet.';return false;}
@@ -916,6 +961,9 @@ function openRoom(code,host){
   chan=s.channel('cb-'+code,{config:{broadcast:{self:false},presence:{key:myId}}});
   chan.on('broadcast',{event:'state'},({payload})=>onRemoteState(payload));
   chan.on('broadcast',{event:'request'},()=>{if(isHost&&G&&G.remote)remotePush();});
+  chan.on('broadcast',{event:'rtc-offer'},({payload})=>onRtcOffer(payload));
+  chan.on('broadcast',{event:'rtc-answer'},({payload})=>onRtcAnswer(payload));
+  chan.on('broadcast',{event:'rtc-ice'},({payload})=>onRtcIce(payload));
   chan.on('presence',{event:'sync'},()=>{if(document.getElementById('lobby').classList.contains('on'))renderLobby();});
   chan.subscribe(async(status)=>{
     if(status==='SUBSCRIBED'){try{await chan.track({name:myName,id:myId,host:isHost});}catch(e){}if(!isHost){try{chan.send({type:'broadcast',event:'request',payload:{}});}catch(e){}}}
@@ -969,9 +1017,10 @@ function hostStart(){
   let ord=players.map((_,i)=>i);
   if(settings.order==='random'){for(let i=ord.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[ord[i],ord[j]]=[ord[j],ord[i]];}}
   G={type:settings.gameType,start:settings.start,out:settings.out,cricketMode:settings.cmode,
-     maxTurns:settings.turns==='limite'?settings.maxTurns:null,
+     maxTurns:settings.turns==='limite'?settings.maxTurns:null,media:settings.media,
      players,order:ord,n:ord.length,committed:[],current:[],mod:1,finished:false,winnerPos:null,endReason:null,remote:true};
   go(G.type==='cricket'?'cricket':'game');render();
+  startMedia();
 }
 function onRemoteState(s){
   if(!s||!s.players)return;
@@ -985,6 +1034,7 @@ function onRemoteState(s){
     const scr=G.type==='cricket'?'cricket':'game';
     if(!document.getElementById(scr).classList.contains('on'))go(scr);
     render();
+    if(G.media&&G.media!=='none')startMedia();
   }
   applyingRemote=false;
 }
@@ -994,6 +1044,98 @@ function shareCode(){
   if(navigator.share){navigator.share({title:'ConviBulle',text}).catch(()=>{});}
   else if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(roomCode).then(()=>toast('Code copié : '+roomCode)).catch(()=>toast('Code : '+roomCode));}
   else toast('Code : '+roomCode);
+}
+
+/* ============ WEBRTC MEDIA (Étape 4.2) ============ */
+let localStream=null,mediaStarted=false,peers={},remoteStreams={};
+let camPref=localStorage.getItem('cb_campref')||'cam';
+const RTC_CFG={iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]};
+function mediaSupported(){return !!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia&&window.RTCPeerConnection);}
+async function ensureLocalStream(){if(localStream)return localStream;
+  localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:(G&&G.media==='video')});return localStream;}
+async function startMedia(){
+  if(!G||!G.media||G.media==='none'||mediaStarted)return;
+  if(!mediaSupported()){setRtcStatus('non supporté');return;}
+  mediaStarted=true;setRtcStatus('connexion…');
+  try{await ensureLocalStream();}
+  catch(e){setRtcStatus('accès refusé');toast('Autorise la caméra et le micro pour ce mode 🙂');mediaStarted=false;return;}
+  document.getElementById('camControls').style.display='flex';
+  document.getElementById('camBtn').style.display=(G.media==='video')?'flex':'none';
+  G.players.forEach(p=>{if(p.id===myId||p.isBot)return;if(myId<p.id)createPeer(p.id,true);});
+  render();
+}
+function stopMedia(){
+  mediaStarted=false;
+  Object.values(peers).forEach(pr=>{try{pr.pc.close();}catch(e){}});peers={};remoteStreams={};
+  if(localStream){localStream.getTracks().forEach(t=>{try{t.stop();}catch(e){}});localStream=null;}
+  ['camControls','camBig','camThumb'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
+  const ra=document.getElementById('remoteAudio');if(ra)ra.srcObject=null;
+  ['game','cricket'].forEach(id=>{const e=document.getElementById(id);if(e)e.classList.remove('hascam');});
+}
+function sig(event,to,data){if(chan){try{chan.send({type:'broadcast',event,payload:Object.assign({from:myId,to},data)});}catch(e){}}}
+function createPeer(id,initiator){
+  if(peers[id])return peers[id];
+  const pc=new RTCPeerConnection(RTC_CFG);const pr={pc,pending:[]};peers[id]=pr;
+  if(localStream)localStream.getTracks().forEach(t=>pc.addTrack(t,localStream));
+  pc.onicecandidate=e=>{if(e.candidate)sig('rtc-ice',id,{candidate:e.candidate});};
+  pc.ontrack=e=>{remoteStreams[id]=e.streams[0];attachAudio();updateMediaView();setRtcStatus('connecté ✓');};
+  pc.onconnectionstatechange=()=>{const st=pc.connectionState;
+    if(st==='connected')setRtcStatus('connecté ✓');else if(st==='failed')setRtcStatus('échec — réseau');else if(st==='disconnected')setRtcStatus('reconnexion…');};
+  if(initiator){pc.createOffer().then(o=>pc.setLocalDescription(o)).then(()=>sig('rtc-offer',id,{sdp:pc.localDescription})).catch(()=>{});}
+  return pr;
+}
+async function onRtcOffer(p){
+  if(!p||p.to!==myId)return;
+  if(!mediaStarted){try{await ensureLocalStream();mediaStarted=true;document.getElementById('camControls').style.display='flex';document.getElementById('camBtn').style.display=(G&&G.media==='video')?'flex':'none';}catch(e){setRtcStatus('accès refusé');return;}}
+  let pr=peers[p.from]||createPeer(p.from,false);const pc=pr.pc;
+  try{await pc.setRemoteDescription(new RTCSessionDescription(p.sdp));
+    for(const c of pr.pending.splice(0)){try{await pc.addIceCandidate(c);}catch(e){}}
+    const a=await pc.createAnswer();await pc.setLocalDescription(a);sig('rtc-answer',p.from,{sdp:pc.localDescription});
+  }catch(e){}
+}
+async function onRtcAnswer(p){if(!p||p.to!==myId)return;const pr=peers[p.from];if(!pr)return;
+  try{await pr.pc.setRemoteDescription(new RTCSessionDescription(p.sdp));
+    for(const c of pr.pending.splice(0)){try{await pr.pc.addIceCandidate(c);}catch(e){}}}catch(e){}}
+async function onRtcIce(p){if(!p||p.to!==myId)return;const pr=peers[p.from];if(!pr)return;
+  const c=new RTCIceCandidate(p.candidate);
+  if(pr.pc.remoteDescription&&pr.pc.remoteDescription.type){try{await pr.pc.addIceCandidate(c);}catch(e){}}else pr.pending.push(c);}
+function setRtcStatus(t){const el=document.getElementById('rtcStatus');if(el)el.textContent=t;}
+function toggleMic(){if(!localStream)return;const on=localStream.getAudioTracks().some(t=>t.enabled);localStream.getAudioTracks().forEach(t=>t.enabled=!on);document.getElementById('micBtn').classList.toggle('off',on);}
+function toggleCam(){if(!localStream)return;const vt=localStream.getVideoTracks();if(!vt.length)return;const on=vt.some(t=>t.enabled);vt.forEach(t=>t.enabled=!on);document.getElementById('camBtn').classList.toggle('off',on);}
+function toggleCamView(){camPref=(camPref==='cam')?'game':'cam';try{localStorage.setItem('cb_campref',camPref);}catch(e){}updateMediaView();}
+function firstRemoteStream(){const ids=Object.keys(remoteStreams);return ids.length?remoteStreams[ids[0]]:null;}
+function attachStream(el,stream){if(el&&el.srcObject!==stream)el.srcObject=stream;}
+function attachAudio(){const a=document.getElementById('remoteAudio');const s=firstRemoteStream();attachStream(a,s);if(a&&a.play)a.play().catch(()=>{});}
+function oppName(){const me=myPosIdx();const k=currentPos();if(k!==me)return G.players[G.order[k]].name;for(let i=0;i<G.n;i++){if(i!==me)return G.players[G.order[i]].name;}return '';}
+function miniScoreHTML(){
+  if(G.type==='cricket'){const st=cricketCompute(true);return G.order.map((pi,k)=>`<div>${escapeHtml(G.players[pi].name)} <b>${st.scores[k]}</b></div>`).join('');}
+  return G.order.map((pi,k)=>`<div>${escapeHtml(G.players[pi].name)} <b>${remainingFor(k)-(k===currentPos()?turnSum(G.current):0)}</b></div>`).join('');
+}
+function dartsOverlayHTML(){let h='';for(let i=0;i<3;i++){const d=G.current[i];h+=`<div class="cdot">${d?dartLabel(d):'–'}</div>`;}return h;}
+function updateMediaView(){
+  if(!G||!G.remote||!G.media||G.media==='none')return;
+  const onGame=document.getElementById('game').classList.contains('on')||document.getElementById('cricket').classList.contains('on');
+  document.getElementById('camControls').style.display=(onGame&&mediaStarted)?'flex':'none';
+  ['game','cricket'].forEach(id=>{const e=document.getElementById(id);if(e)e.classList.toggle('hascam',onGame&&mediaStarted);});
+  attachAudio();
+  if(!onGame){document.getElementById('camBig').style.display='none';document.getElementById('camThumb').style.display='none';return;}
+  const myTurn=currentPos()===myPosIdx();
+  const stream=firstRemoteStream();
+  const bigCam=(!myTurn)&&camPref==='cam'&&G.media==='video';
+  const tBtn=document.getElementById('camToggleBtn');
+  tBtn.style.display=(!myTurn&&G.media==='video')?'flex':'none';
+  tBtn.textContent=bigCam?'📊 Voir le jeu':'📹 Voir la caméra';
+  const big=document.getElementById('camBig'),thumb=document.getElementById('camThumb');
+  if(bigCam){big.style.display='flex';attachStream(document.getElementById('camBigVideo'),stream);
+    document.getElementById('camBigTag').textContent='🔴 '+oppName()+' joue';
+    document.getElementById('camScore').innerHTML=miniScoreHTML();
+    document.getElementById('camDarts').innerHTML=dartsOverlayHTML();
+    thumb.style.display='none';
+  } else {
+    big.style.display='none';
+    if(G.media==='video'&&stream){thumb.style.display='block';attachStream(document.getElementById('camThumbVideo'),stream);document.getElementById('camThumbLabel').textContent=oppName();}
+    else thumb.style.display='none';
+  }
 }
 
 /* ============ PWA INSTALL ============ */
