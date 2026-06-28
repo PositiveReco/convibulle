@@ -162,7 +162,7 @@
     <div class="spacer"></div>
     <button id="installBtn" class="btn install" style="display:none;" onclick="installApp()">⤓ Installer l'app sur l'écran d'accueil</button>
     <div id="lastGame" class="muted" style="text-align:center;margin-top:10px;"></div>
-    <div class="muted" style="text-align:center;font-size:10px;opacity:.5;margin-top:6px;">v1.4</div>
+    <div class="muted" style="text-align:center;font-size:10px;opacity:.5;margin-top:6px;">v1.4.1</div>
   </section>
 
   <!-- SETTINGS -->
@@ -322,11 +322,15 @@
   <section id="remote" class="screen">
     <div class="topbar"><button class="back" onclick="leaveRoom();go('home')">◀ Accueil</button><b>Jouer à distance</b><span style="width:50px"></span></div>
     <div class="muted" style="margin-bottom:14px;">Joue avec tes proches au loin : chacun a son vrai jeu de fléchettes, et les scores se synchronisent en direct.</div>
-    <div class="field-label">Ton prénom</div>
-    <input id="rName" class="field-input" maxlength="14" placeholder="Ton prénom" oninput="saveRName(this.value)">
-    <button class="btn" style="margin-top:14px;" onclick="createRoom()">➕ Créer un salon</button>
-    <div style="text-align:center;color:var(--muted);margin:18px 0 10px;">— ou —</div>
-    <div class="field-label">Code du salon</div>
+    <div style="background:var(--card);border:1px solid var(--champ-deep);border-radius:14px;padding:14px;margin-bottom:18px;">
+      <div class="field-label" style="margin-top:0;">Ton prénom <span style="color:var(--champ-bright)">＊ obligatoire</span></div>
+      <input id="rName" class="field-input" maxlength="14" placeholder="Ton prénom" oninput="saveRName(this.value)">
+      <div class="muted" style="font-size:11px;margin-top:7px;">Nécessaire pour <b>créer</b> comme pour <b>rejoindre</b> un salon.</div>
+    </div>
+    <div class="field-label" style="margin-top:0;">Démarrer une partie</div>
+    <button class="btn" onclick="createRoom()">➕ Créer un salon</button>
+    <div style="text-align:center;color:var(--muted);margin:18px 0 10px;font-weight:700;">— ou —</div>
+    <div class="field-label" style="margin-top:0;">Rejoindre avec un code</div>
     <input id="rCode" class="field-input" maxlength="12" placeholder="BULLE-1234" style="text-transform:uppercase;letter-spacing:2px;">
     <button class="btn sec" style="margin-top:12px;" onclick="joinRoom()">🔗 Rejoindre</button>
     <div class="spacer"></div>
@@ -356,6 +360,15 @@
         <div class="field-label">Variante Cricket</div>
         <div class="row" data-group="rcmode"><div class="chip on" data-val="standard">Classique</div><div class="chip" data-val="cutthroat">Coupe-gorge</div></div>
       </div>
+      <div class="field-label">Nombre de tours</div>
+      <div class="row" data-group="rturns"><div class="chip on" data-val="illimite">Illimité</div><div class="chip" data-val="limite">Limité</div></div>
+      <div id="rTurnsStepper" class="stepper" style="display:none;margin-top:8px;">
+        <button class="b" onclick="bumpTurns(-1)">−</button>
+        <div style="text-align:center;"><div class="v" id="rTurnsVal">20</div><div class="u">tours max</div></div>
+        <button class="b" onclick="bumpTurns(1)">+</button>
+      </div>
+      <div class="field-label">Ordre des joueurs</div>
+      <div class="row" data-group="rorder"><div class="chip on" data-val="random">🎲 Aléatoire</div><div class="chip" data-val="manual">✋ Manuel</div></div>
     </div>
     <div class="field-label">Connectés</div>
     <div id="lobbyPlayers" class="stack"></div>
@@ -511,10 +524,13 @@ document.querySelectorAll('[data-group]').forEach(grp=>{
       if(g==='order')settings.order=v;
       if(g==='opp'){settings.bot=(v==='bot');document.getElementById('levelRow').style.display=settings.bot?'block':'none';}
       if(g==='level')settings.botLevel=v;
+      if(g==='rturns'){settings.turns=v;document.getElementById('rTurnsStepper').style.display=v==='limite'?'flex':'none';}
+      if(g==='rorder')settings.order=v;
+      if(document.getElementById('lobby').classList.contains('on'))renderLobby();
     });
   });
 });
-function bumpTurns(d){settings.maxTurns=Math.max(3,Math.min(60,settings.maxTurns+d));document.getElementById('turnsVal').textContent=settings.maxTurns;}
+function bumpTurns(d){settings.maxTurns=Math.max(3,Math.min(60,settings.maxTurns+d));const a=document.getElementById('turnsVal'),b=document.getElementById('rTurnsVal');if(a)a.textContent=settings.maxTurns;if(b)b.textContent=settings.maxTurns;}
 
 /* ============ PLAYERS ============ */
 function renderPlayers(){
@@ -922,24 +938,39 @@ function joinRoom(){
 function presencePlayers(){if(!chan)return [];let st={};try{st=chan.presenceState();}catch(e){return [];}
   const arr=[];Object.keys(st).forEach(k=>{const m=st[k]&&st[k][0];if(m)arr.push({id:m.id,name:m.name,host:!!m.host});});
   arr.sort((a,b)=>(b.host?1:0)-(a.host?1:0));return arr;}
+let lobbyOrder=[];
+function orderedPresence(){
+  const pls=presencePlayers();const byId={};pls.forEach(p=>byId[p.id]=p);
+  if(settings.order==='manual'){
+    lobbyOrder=lobbyOrder.filter(id=>byId[id]);pls.forEach(p=>{if(lobbyOrder.indexOf(p.id)<0)lobbyOrder.push(p.id);});
+    return lobbyOrder.map(id=>byId[id]);
+  }
+  return pls;
+}
+function moveLobby(id,dir){const i=lobbyOrder.indexOf(id),j=i+dir;if(i<0||j<0||j>=lobbyOrder.length)return;[lobbyOrder[i],lobbyOrder[j]]=[lobbyOrder[j],lobbyOrder[i]];renderLobby();}
 function renderLobby(){
   document.getElementById('lobbyCode').textContent=roomCode||'—';
   document.getElementById('hostConfig').style.display=isHost?'block':'none';
-  const pls=presencePlayers();
+  const pls=orderedPresence();
+  const manual=isHost&&settings.order==='manual';
   const list=document.getElementById('lobbyPlayers');list.innerHTML='';
   if(!pls.length){list.innerHTML='<div class="muted" style="text-align:center">Connexion au salon…</div>';}
   pls.forEach((p,i)=>{const card=document.createElement('div');card.className='pcard';
-    card.innerHTML=`<span class="dot-on"></span><span class="av" style="background:${COLORS[i%COLORS.length]}">${(p.name||'?').charAt(0).toUpperCase()}</span><div style="flex:1">${escapeHtml(p.name)}${p.id===myId?' <span class="muted">(toi)</span>':''}</div>${p.host?'<span class="rembadge">hôte</span>':''}`;
+    const ord=manual?`<div class="ordbtns"><button onclick="moveLobby('${p.id}',-1)">▲</button><button onclick="moveLobby('${p.id}',1)">▼</button></div>`:'';
+    card.innerHTML=`${ord}<span class="dot-on"></span><span class="av" style="background:${COLORS[i%COLORS.length]}">${(p.name||'?').charAt(0).toUpperCase()}</span><div style="flex:1">${escapeHtml(p.name)}${p.id===myId?' <span class="muted">(toi)</span>':''}</div>${p.host?'<span class="rembadge">hôte</span>':''}`;
     list.appendChild(card);});
   const enough=pls.length>=2;
-  if(isHost){document.getElementById('lobbyStartBtn').style.display=enough?'block':'none';document.getElementById('lobbyWait').textContent=enough?'':'En attente d\'au moins une personne… partage le code !';}
+  if(isHost){document.getElementById('lobbyStartBtn').style.display=enough?'block':'none';document.getElementById('lobbyWait').textContent=enough?(settings.order==='manual'?'Ordre : '+pls.map(p=>p.name).join(' → '):''):'En attente d\'au moins une personne… partage le code !';}
   else{document.getElementById('lobbyStartBtn').style.display='none';document.getElementById('lobbyWait').textContent='En attente que l\'hôte lance la partie…';}
 }
 function hostStart(){
-  const pls=presencePlayers();if(pls.length<2){toast('Attends qu\'au moins une personne rejoigne');return;}
+  const pls=orderedPresence();if(pls.length<2){toast('Attends qu\'au moins une personne rejoigne');return;}
   const players=pls.map((p,i)=>({id:p.id,name:p.name,color:COLORS[i%COLORS.length],isBot:false}));
-  const ord=players.map((_,i)=>i);
-  G={type:settings.gameType,start:settings.start,out:settings.out,cricketMode:settings.cmode,maxTurns:null,players,order:ord,n:ord.length,committed:[],current:[],mod:1,finished:false,winnerPos:null,endReason:null,remote:true};
+  let ord=players.map((_,i)=>i);
+  if(settings.order==='random'){for(let i=ord.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[ord[i],ord[j]]=[ord[j],ord[i]];}}
+  G={type:settings.gameType,start:settings.start,out:settings.out,cricketMode:settings.cmode,
+     maxTurns:settings.turns==='limite'?settings.maxTurns:null,
+     players,order:ord,n:ord.length,committed:[],current:[],mod:1,finished:false,winnerPos:null,endReason:null,remote:true};
   go(G.type==='cricket'?'cricket':'game');render();
 }
 function onRemoteState(s){
