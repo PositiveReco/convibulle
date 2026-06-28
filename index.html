@@ -132,7 +132,15 @@
     #c-left{border-right:1px solid var(--line);padding-right:16px;margin-bottom:0;overflow:auto;}
     #c-right{margin-top:0;display:flex;flex-direction:column;justify-content:flex-start;}
   }
+  /* remote */
+  .codebox{font-size:34px;font-weight:800;letter-spacing:4px;color:transparent;background:linear-gradient(180deg,var(--champ-bright),var(--champ-deep));-webkit-background-clip:text;background-clip:text;text-align:center;}
+  .field-input{width:100%;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px;color:var(--txt);font-size:16px;outline:none;text-align:center;}
+  .field-input:focus{border-color:var(--champ);}
+  .dot-on{width:9px;height:9px;border-radius:50%;background:var(--green);display:inline-block;margin-right:6px;box-shadow:0 0 8px rgba(70,201,138,.6);}
+  .remlock .mods,.remlock .numgrid,.remlock .act-row{opacity:.3;pointer-events:none;filter:grayscale(.3);}
+  .rembadge{display:inline-block;font-size:11px;color:var(--champ-bright);border:1px solid var(--champ-deep);border-radius:8px;padding:2px 8px;margin-left:6px;}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <div id="app">
@@ -148,13 +156,13 @@
     <div style="height:26px;"></div>
     <div class="stack">
       <button class="btn" onclick="go('settings')">🎯 Partie locale</button>
-      <button class="btn sec" onclick="toast('Le mode à distance arrive à une prochaine étape 🙂')">🌐 Jouer à distance</button>
+      <button class="btn sec" onclick="go('remote')">🌐 Jouer à distance</button>
       <button class="btn ghost" onclick="go('stats')">👥 Joueurs &amp; stats</button>
     </div>
     <div class="spacer"></div>
     <button id="installBtn" class="btn install" style="display:none;" onclick="installApp()">⤓ Installer l'app sur l'écran d'accueil</button>
     <div id="lastGame" class="muted" style="text-align:center;margin-top:10px;"></div>
-    <div class="muted" style="text-align:center;font-size:10px;opacity:.5;margin-top:6px;">v1.3.1</div>
+    <div class="muted" style="text-align:center;font-size:10px;opacity:.5;margin-top:6px;">v1.4</div>
   </section>
 
   <!-- SETTINGS -->
@@ -282,8 +290,8 @@
     <div class="stack" id="winRanking" style="width:100%;max-width:360px;"></div>
     <div class="spacer"></div>
     <div class="stack" style="width:100%;max-width:360px;">
-      <button class="btn" onclick="replay()">🔁 Rejouer (mêmes joueurs)</button>
-      <button class="btn ghost" onclick="go('home')">🏠 Accueil</button>
+      <button class="btn" id="replayBtn" onclick="replay()">🔁 Rejouer (mêmes joueurs)</button>
+      <button class="btn ghost" onclick="leaveRoom();go('home')">🏠 Accueil</button>
     </div>
   </section>
 
@@ -308,6 +316,52 @@
     <div id="historyList" class="stack"></div>
     <div class="spacer"></div>
     <button class="btn ghost" id="clearHistBtn" style="margin-top:10px;" onclick="clearHistory()">Effacer l'historique</button>
+  </section>
+
+  <!-- REMOTE: create/join -->
+  <section id="remote" class="screen">
+    <div class="topbar"><button class="back" onclick="leaveRoom();go('home')">◀ Accueil</button><b>Jouer à distance</b><span style="width:50px"></span></div>
+    <div class="muted" style="margin-bottom:14px;">Joue avec tes proches au loin : chacun a son vrai jeu de fléchettes, et les scores se synchronisent en direct.</div>
+    <div class="field-label">Ton prénom</div>
+    <input id="rName" class="field-input" maxlength="14" placeholder="Ton prénom" oninput="saveRName(this.value)">
+    <button class="btn" style="margin-top:14px;" onclick="createRoom()">➕ Créer un salon</button>
+    <div style="text-align:center;color:var(--muted);margin:18px 0 10px;">— ou —</div>
+    <div class="field-label">Code du salon</div>
+    <input id="rCode" class="field-input" maxlength="12" placeholder="BULLE-1234" style="text-transform:uppercase;letter-spacing:2px;">
+    <button class="btn sec" style="margin-top:12px;" onclick="joinRoom()">🔗 Rejoindre</button>
+    <div class="spacer"></div>
+    <div id="remoteMsg" class="muted" style="text-align:center;font-size:12px;"></div>
+  </section>
+
+  <!-- LOBBY -->
+  <section id="lobby" class="screen">
+    <div class="topbar"><button class="back" onclick="leaveRoom();go('remote')">◀ Quitter</button><b>Salon</b><span style="width:50px"></span></div>
+    <div style="text-align:center;margin:6px 0 4px;">
+      <div class="muted">Code à partager</div>
+      <div class="codebox" id="lobbyCode">—</div>
+      <button class="btn sec" id="shareBtn" style="width:auto;display:inline-block;padding:9px 16px;margin-top:6px;" onclick="shareCode()">🔗 Partager / Copier</button>
+    </div>
+    <div id="hostConfig" style="display:none;margin-top:12px;">
+      <div class="field-label">Type de jeu</div>
+      <div class="row" data-group="rtype">
+        <div class="chip on" data-val="501">501</div>
+        <div class="chip" data-val="301">301</div>
+        <div class="chip" data-val="cricket">Cricket</div>
+      </div>
+      <div id="rOutRow">
+        <div class="field-label">Sortie</div>
+        <div class="row" data-group="rout"><div class="chip on" data-val="simple">Simple</div><div class="chip" data-val="double">Double</div></div>
+      </div>
+      <div id="rVariantRow" style="display:none;">
+        <div class="field-label">Variante Cricket</div>
+        <div class="row" data-group="rcmode"><div class="chip on" data-val="standard">Classique</div><div class="chip" data-val="cutthroat">Coupe-gorge</div></div>
+      </div>
+    </div>
+    <div class="field-label">Connectés</div>
+    <div id="lobbyPlayers" class="stack"></div>
+    <div class="spacer"></div>
+    <button class="btn" id="lobbyStartBtn" style="display:none;" onclick="hostStart()">Lancer la partie 🎯</button>
+    <div id="lobbyWait" class="muted" style="text-align:center;margin-top:8px;"></div>
   </section>
 
   <div id="toast" class="toast"></div>
@@ -420,6 +474,8 @@ function go(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remo
   if(id==='home')renderHome();
   if(id==='stats')renderStats();
   if(id==='history')renderHistory();
+  if(id==='remote')renderRemote();
+  if(id==='lobby')renderLobby();
 }
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2200);}
 
@@ -444,6 +500,13 @@ document.querySelectorAll('[data-group]').forEach(grp=>{
       }
       if(g==='out')settings.out=v;
       if(g==='cmode')settings.cmode=v;
+      if(g==='rtype'){
+        if(v==='cricket')settings.gameType='cricket';else{settings.gameType='x01';settings.start=parseInt(v);}
+        document.getElementById('rOutRow').style.display=settings.gameType==='cricket'?'none':'block';
+        document.getElementById('rVariantRow').style.display=settings.gameType==='cricket'?'block':'none';
+      }
+      if(g==='rout')settings.out=v;
+      if(g==='rcmode')settings.cmode=v;
       if(g==='turns'){settings.turns=v;document.getElementById('turnsStepper').style.display=v==='limite'?'flex':'none';}
       if(g==='order')settings.order=v;
       if(g==='opp'){settings.bot=(v==='bot');document.getElementById('levelRow').style.display=settings.bot?'block':'none';}
@@ -504,7 +567,7 @@ function startGame(){
      committed:[], current:[], mod:1, finished:false, winnerPos:null, endReason:null};
   go(G.type==='cricket'?'cricket':'game');render();maybeBotTurn();
 }
-function render(){if(G&&G.type==='cricket')renderCricket();else renderGame();}
+function render(){if(G&&G.type==='cricket')renderCricket();else renderGame();remotePush();}
 /* ============ CRICKET ENGINE (Étape 3) ============ */
 const CRICKET_TARGETS=[20,19,18,17,16,15,25];
 function cricketCompute(includeCurrent){
@@ -547,6 +610,7 @@ function turnSum(arr){return arr.reduce((s,d)=>s+dartPoints(d),0);}
 
 function pressNum(num){
   if(botBusy && !_fromBot)return;
+  if(remoteLocked())return;
   if(G.finished)return;
   if(G.current.length>=3)return;
   let mult=G.mod;
@@ -571,6 +635,7 @@ function pressNum(num){
 }
 function endTurn(){
   if(botBusy && !_fromBot)return;
+  if(remoteLocked())return;
   if(G.finished)return;
   commitTurn(false);
   afterTurnAdvance();
@@ -601,7 +666,7 @@ function afterTurnAdvance(){
   maybeBotTurn();
 }
 function undo(){
-  if(botBusy||!G)return;
+  if(botBusy||!G||remoteLocked())return;
   if(G.finished){G.finished=false;G.winnerPos=null;G.endReason=null;}
   if(G.current.length>0){G.current.pop();G.mod=1;}
   else if(G.committed.length>0){const t=G.committed.pop();G.current=t.darts.slice();if(G.current.length>0)G.current.pop();G.mod=1;}
@@ -615,6 +680,7 @@ function finishGame(){
   localStorage.setItem('cb_last',winner.name+' a gagné 🏆');
   recordGame();
   renderWin();go('win');
+  remotePush();
 }
 
 /* ============ GAME RENDER ============ */
@@ -662,6 +728,10 @@ function renderGame(){
   const botTurn=curIsBot()&&!G.finished;
   document.getElementById('game').classList.toggle('botturn',botTurn);
   if(botTurn){document.getElementById('whoTurn').textContent='🤖 '+p.name+' joue';document.getElementById('whoTurn').style.color=p.color;ll.textContent='réfléchit…';ll.className='live think';}
+  // remote indicator
+  const remLocked=remoteLocked();
+  document.getElementById('game').classList.toggle('remlock',remLocked);
+  if(remoteActive&&!G.finished){document.getElementById('whoTurn').textContent=remLocked?('🌐 À '+p.name+' de jouer'):'🌐 À toi de jouer';document.getElementById('whoTurn').style.color=p.color;ll.textContent=remLocked?('en attente de '+p.name+'…'):'à toi !';ll.className='live';}
 }
 function escapeHtml(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 /* ============ CRICKET RENDER ============ */
@@ -703,8 +773,11 @@ function renderCricket(){
   const botTurn=curIsBot()&&!G.finished;
   document.getElementById('cricket').classList.toggle('botturn',botTurn);
   if(botTurn){document.getElementById('cwho').textContent='🤖 '+p.name+' joue — réfléchit…';document.getElementById('cwho').style.color=p.color;}
+  const remLocked=remoteLocked();
+  document.getElementById('cricket').classList.toggle('remlock',remLocked);
+  if(remoteActive&&!G.finished){document.getElementById('cwho').textContent=remLocked?('🌐 À '+p.name+' de jouer — en attente…'):'🌐 À toi de jouer';document.getElementById('cwho').style.color=p.color;}
 }
-function setMod(m){if((botBusy&&!_fromBot)||G.finished)return;G.mod=(G.mod===m)?1:m;render();}
+function setMod(m){if((botBusy&&!_fromBot)||remoteLocked()||G.finished)return;G.mod=(G.mod===m)?1:m;render();}
 
 /* ============ WIN ============ */
 function renderWin(){
@@ -728,6 +801,7 @@ function renderWin(){
       div.innerHTML=`<span>${medals[i]||'  '} ${escapeHtml(r.name)}</span><b>${r.rem===0?'fini ✓':r.rem+' restants'}</b>`;wrap.appendChild(div);});
   }
   document.getElementById('winSub').textContent=sub;
+  document.getElementById('replayBtn').style.display=(G.remote?'none':'block');
 }
 function replay(){startGame();}
 
@@ -805,6 +879,90 @@ async function botPlayTurn(){
   botBusy=false;
   if(G&&!G.finished)render();
   maybeBotTurn();
+}
+
+/* ============ REMOTE (Étape 4.1) ============ */
+const SUPA_URL='https://jnqfkvmnrabidwgslrzy.supabase.co';
+const SUPA_KEY='sb_publishable_-k-KJli2GkavbZ5MNY9sFg_SbPjFotj';
+let supa=null,chan=null,myId=uid(),myName='',roomCode='',isHost=false,remoteActive=false,applyingRemote=false;
+function getSupa(){if(!supa){if(!window.supabase)return null;try{supa=window.supabase.createClient(SUPA_URL,SUPA_KEY);}catch(e){return null;}}return supa;}
+function saveRName(v){try{localStorage.setItem('cb_rname',v);}catch(e){}}
+function renderRemote(){document.getElementById('rName').value=localStorage.getItem('cb_rname')||'';document.getElementById('rCode').value='';document.getElementById('remoteMsg').textContent='';}
+function myPosIdx(){return (G&&G.order)?G.order.findIndex(pi=>G.players[pi].id===myId):-1;}
+function remoteLocked(){return remoteActive&&G&&G.remote&&!G.finished&&currentPos()!==myPosIdx();}
+function remotePush(){if(remoteActive&&!applyingRemote&&chan&&G){try{chan.send({type:'broadcast',event:'state',payload:G});}catch(e){}}}
+function leaveRoom(){try{if(chan){const s=getSupa();if(s)s.removeChannel(chan);}}catch(e){}chan=null;remoteActive=false;isHost=false;roomCode='';if(G&&G.remote)G=null;}
+function openRoom(code,host){
+  const s=getSupa();
+  if(!s){toast('Connexion impossible — vérifie ta connexion internet.');document.getElementById('remoteMsg').textContent='Le mode à distance nécessite internet.';return false;}
+  leaveRoom();
+  roomCode=code;isHost=host;remoteActive=true;
+  chan=s.channel('cb-'+code,{config:{broadcast:{self:false},presence:{key:myId}}});
+  chan.on('broadcast',{event:'state'},({payload})=>onRemoteState(payload));
+  chan.on('broadcast',{event:'request'},()=>{if(isHost&&G&&G.remote)remotePush();});
+  chan.on('presence',{event:'sync'},()=>{if(document.getElementById('lobby').classList.contains('on'))renderLobby();});
+  chan.subscribe(async(status)=>{
+    if(status==='SUBSCRIBED'){try{await chan.track({name:myName,id:myId,host:isHost});}catch(e){}if(!isHost){try{chan.send({type:'broadcast',event:'request',payload:{}});}catch(e){}}}
+  });
+  return true;
+}
+function createRoom(){
+  const name=(document.getElementById('rName').value||'').trim();if(!name){toast('Entre ton prénom');return;}
+  myName=name;saveRName(name);isHost=true;
+  const code='BULLE-'+Math.floor(1000+Math.random()*9000);
+  if(openRoom(code,true))go('lobby');
+}
+function joinRoom(){
+  const name=(document.getElementById('rName').value||'').trim();if(!name){toast('Entre ton prénom');return;}
+  let code=(document.getElementById('rCode').value||'').trim().toUpperCase();if(!code){toast('Entre le code du salon');return;}
+  if(/^\d{4}$/.test(code))code='BULLE-'+code;
+  myName=name;saveRName(name);isHost=false;
+  if(openRoom(code,false))go('lobby');
+}
+function presencePlayers(){if(!chan)return [];let st={};try{st=chan.presenceState();}catch(e){return [];}
+  const arr=[];Object.keys(st).forEach(k=>{const m=st[k]&&st[k][0];if(m)arr.push({id:m.id,name:m.name,host:!!m.host});});
+  arr.sort((a,b)=>(b.host?1:0)-(a.host?1:0));return arr;}
+function renderLobby(){
+  document.getElementById('lobbyCode').textContent=roomCode||'—';
+  document.getElementById('hostConfig').style.display=isHost?'block':'none';
+  const pls=presencePlayers();
+  const list=document.getElementById('lobbyPlayers');list.innerHTML='';
+  if(!pls.length){list.innerHTML='<div class="muted" style="text-align:center">Connexion au salon…</div>';}
+  pls.forEach((p,i)=>{const card=document.createElement('div');card.className='pcard';
+    card.innerHTML=`<span class="dot-on"></span><span class="av" style="background:${COLORS[i%COLORS.length]}">${(p.name||'?').charAt(0).toUpperCase()}</span><div style="flex:1">${escapeHtml(p.name)}${p.id===myId?' <span class="muted">(toi)</span>':''}</div>${p.host?'<span class="rembadge">hôte</span>':''}`;
+    list.appendChild(card);});
+  const enough=pls.length>=2;
+  if(isHost){document.getElementById('lobbyStartBtn').style.display=enough?'block':'none';document.getElementById('lobbyWait').textContent=enough?'':'En attente d\'au moins une personne… partage le code !';}
+  else{document.getElementById('lobbyStartBtn').style.display='none';document.getElementById('lobbyWait').textContent='En attente que l\'hôte lance la partie…';}
+}
+function hostStart(){
+  const pls=presencePlayers();if(pls.length<2){toast('Attends qu\'au moins une personne rejoigne');return;}
+  const players=pls.map((p,i)=>({id:p.id,name:p.name,color:COLORS[i%COLORS.length],isBot:false}));
+  const ord=players.map((_,i)=>i);
+  G={type:settings.gameType,start:settings.start,out:settings.out,cricketMode:settings.cmode,maxTurns:null,players,order:ord,n:ord.length,committed:[],current:[],mod:1,finished:false,winnerPos:null,endReason:null,remote:true};
+  go(G.type==='cricket'?'cricket':'game');render();
+}
+function onRemoteState(s){
+  if(!s||!s.players)return;
+  const wasFinished=G&&G.finished;
+  applyingRemote=true;
+  G=s;G.remote=true;
+  if(G.finished){
+    if(!wasFinished){try{localStorage.setItem('cb_last',G.players[G.order[G.winnerPos]].name+' a gagné 🏆');recordGame();}catch(e){}}
+    renderWin();go('win');
+  } else {
+    const scr=G.type==='cricket'?'cricket':'game';
+    if(!document.getElementById(scr).classList.contains('on'))go(scr);
+    render();
+  }
+  applyingRemote=false;
+}
+function shareCode(){
+  const url=location.origin+location.pathname;
+  const text='Rejoins ma partie ConviBulle ! Code : '+roomCode+' — '+url;
+  if(navigator.share){navigator.share({title:'ConviBulle',text}).catch(()=>{});}
+  else if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(roomCode).then(()=>toast('Code copié : '+roomCode)).catch(()=>toast('Code : '+roomCode));}
+  else toast('Code : '+roomCode);
 }
 
 /* ============ PWA INSTALL ============ */
