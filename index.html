@@ -59,6 +59,10 @@
   /* GAME */
   #game{padding-bottom:max(12px,env(safe-area-inset-bottom));}
   .gamewrap{display:flex;flex-direction:column;height:100%;}
+  .cricketwrap{display:flex;flex-direction:column;height:100%;}
+  #c-left{margin-bottom:8px;}
+  #c-right{margin-top:auto;}
+  #cricktable{margin-top:2px;}
   .turnbar{display:flex;gap:5px;margin-bottom:8px;flex-wrap:wrap;}
   .tb{flex:1;min-width:64px;text-align:center;padding:7px 3px;border-radius:9px;background:var(--card);border:1px solid var(--line);}
   .tb .nm{font-size:10px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -112,6 +116,10 @@
     #g-right{display:flex;flex-direction:column;}
     .bigscore{text-align:left;}
     .dartslots .slot{max-width:none;}
+    #cricket .cricketwrap{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto 1fr;gap:0 18px;}
+    #cricket .turnbar{grid-column:1/3;}
+    #c-left{border-right:1px solid var(--line);padding-right:16px;margin-bottom:0;overflow:auto;}
+    #c-right{margin-top:0;display:flex;flex-direction:column;justify-content:flex-start;}
   }
 </style>
 </head>
@@ -135,7 +143,7 @@
     <div class="spacer"></div>
     <button id="installBtn" class="btn install" style="display:none;" onclick="installApp()">⤓ Installer l'app sur l'écran d'accueil</button>
     <div id="lastGame" class="muted" style="text-align:center;margin-top:10px;"></div>
-    <div class="muted" style="text-align:center;font-size:10px;opacity:.5;margin-top:6px;">v1.2</div>
+    <div class="muted" style="text-align:center;font-size:10px;opacity:.5;margin-top:6px;">v1.3</div>
   </section>
 
   <!-- SETTINGS -->
@@ -145,12 +153,22 @@
     <div class="row" data-group="start">
       <div class="chip on" data-val="501">501</div>
       <div class="chip" data-val="301">301</div>
-      <div class="chip" data-val="cricket" onclick="toast('Le Cricket arrive à l\'étape 3 🙂');return false;" style="opacity:.5">Cricket</div>
+      <div class="chip" data-val="cricket">Cricket</div>
     </div>
-    <div class="field-label">Sortie</div>
-    <div class="row" data-group="out">
-      <div class="chip on" data-val="simple">Simple</div>
-      <div class="chip" data-val="double">Double</div>
+    <div id="outRow">
+      <div class="field-label">Sortie</div>
+      <div class="row" data-group="out">
+        <div class="chip on" data-val="simple">Simple</div>
+        <div class="chip" data-val="double">Double</div>
+      </div>
+    </div>
+    <div id="variantRow" style="display:none;">
+      <div class="field-label">Variante Cricket</div>
+      <div class="row" data-group="cmode">
+        <div class="chip on" data-val="standard">Classique</div>
+        <div class="chip" data-val="cutthroat">Coupe-gorge</div>
+      </div>
+      <div class="muted" style="font-size:11px;margin-top:5px;">Classique : le plus de points gagne. Coupe-gorge : les points vont aux adversaires, le plus petit score gagne.</div>
     </div>
     <div class="field-label">Nombre de tours</div>
     <div class="row" data-group="turns">
@@ -221,6 +239,29 @@
     </div>
   </section>
 
+  <!-- CRICKET -->
+  <section id="cricket" class="screen">
+    <div class="cricketwrap">
+      <div class="turnbar" id="cturnbar"></div>
+      <div id="c-left">
+        <div class="who" id="cwho" style="font-size:13px;color:var(--champ);font-weight:700;margin-bottom:6px;"></div>
+        <div style="overflow-x:auto;"><table class="crick" id="cricktable"></table></div>
+      </div>
+      <div id="c-right">
+        <div class="dartslots" id="cdartslots"></div>
+        <div class="mods">
+          <div class="mod" id="cmodD" onclick="setMod(2)">Double</div>
+          <div class="mod" id="cmodT" onclick="setMod(3)">Triple</div>
+        </div>
+        <div class="numgrid" id="cnumgrid" style="grid-template-columns:repeat(4,1fr);"></div>
+        <div class="act-row">
+          <button class="undo" id="cundoBtn" onclick="undo()">↩︎ Annuler</button>
+          <button class="btn" id="cendTurnBtn" onclick="endTurn()">✓ Tour terminé</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- WIN -->
   <section id="win" class="screen">
     <div class="spacer"></div>
@@ -276,7 +317,7 @@ function logoSVG(g){g=g||'#E6CC7E';
 /* ============ STATE ============ */
 const COLORS=['#E6CC7E','#7fb2ff','#46c98a','#ff8f6b','#a98bff','#ff6fae','#5ad0d0','#ffd23f'];
 let roster=loadRoster();          // [{name,color}]
-let settings={start:501,out:'simple',turns:'illimite',maxTurns:20,order:'random',bot:false,botLevel:'confirme'};
+let settings={gameType:'x01',start:501,out:'simple',cmode:'standard',turns:'illimite',maxTurns:20,order:'random',bot:false,botLevel:'confirme'};
 let G=null;                        // active game
 
 function uid(){return 'p_'+Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4);}
@@ -287,14 +328,21 @@ function saveRoster(){try{localStorage.setItem('cb_roster',JSON.stringify(roster
 /* ============ GAMES STORAGE (Étape 2) ============ */
 function loadGames(){try{return JSON.parse(localStorage.getItem('cb_games'))||[];}catch(e){return [];}}
 function statsFor(id){const games=loadGames();let gp=0,gw=0,pts=0,turns=0,best=0;
-  games.forEach(g=>{const me=(g.players||[]).find(p=>p.id===id);if(me){gp++;if(me.won)gw++;pts+=me.points||0;turns+=me.turns||0;best=Math.max(best,me.best||0);}});
+  games.forEach(g=>{const me=(g.players||[]).find(p=>p.id===id);if(!me)return;gp++;if(me.won)gw++;
+    if(g.type==='301'||g.type==='501'){pts+=me.points||0;turns+=me.turns||0;best=Math.max(best,me.best||0);}});
   return {gp,gw,winRate:gp?Math.round(gw*100/gp):0,avg:turns?+(pts/turns).toFixed(1):0,best};}
 function recordGame(){try{
   const n=G.n;
+  const cst=G.type==='cricket'?cricketCompute(false):null;
   const players=G.order.map((pi,k)=>{const ta=G.committed.filter((t,i)=>i%n===k);
-    const points=ta.reduce((s,t)=>s+t.scored,0),darts=ta.reduce((s,t)=>s+t.darts.length,0),best=ta.reduce((m,t)=>Math.max(m,t.scored),0),turns=ta.length;
-    const p=G.players[pi];return {id:p.id||('p_'+p.name),name:p.name,isBot:!!p.isBot,won:k===G.winnerPos,points,darts,turns,best,remaining:remainingFor(k),avg:turns?+(points/turns).toFixed(1):0};});
-  const rec={id:Date.now(),date:new Date().toISOString(),type:String(G.start),out:G.out,endReason:G.endReason,players,winnerName:G.players[G.order[G.winnerPos]].name};
+    const darts=ta.reduce((s,t)=>s+t.darts.length,0),turns=ta.length;
+    const p=G.players[pi];
+    if(G.type==='cricket'){
+      return {id:p.id||('p_'+p.name),name:p.name,isBot:!!p.isBot,won:k===G.winnerPos,points:cst.scores[k],darts,turns,best:0,remaining:cst.scores[k]};
+    }
+    const points=ta.reduce((s,t)=>s+t.scored,0),best=ta.reduce((m,t)=>Math.max(m,t.scored),0);
+    return {id:p.id||('p_'+p.name),name:p.name,isBot:!!p.isBot,won:k===G.winnerPos,points,darts,turns,best,remaining:remainingFor(k),avg:turns?+(points/turns).toFixed(1):0};});
+  const rec={id:Date.now(),date:new Date().toISOString(),type:G.type==='cricket'?'Cricket':String(G.start),cmode:G.cricketMode,out:G.out,endReason:G.endReason,players,winnerName:G.players[G.order[G.winnerPos]].name};
   const games=loadGames();games.unshift(rec);if(games.length>200)games.length=200;
   localStorage.setItem('cb_games',JSON.stringify(games));
 }catch(e){}}
@@ -374,12 +422,17 @@ function renderHome(){
 document.querySelectorAll('[data-group]').forEach(grp=>{
   grp.querySelectorAll('.chip').forEach(ch=>{
     ch.addEventListener('click',()=>{
-      if(ch.dataset.val==='cricket')return;
       grp.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
       ch.classList.add('on');
       const g=grp.dataset.group,v=ch.dataset.val;
-      if(g==='start')settings.start=parseInt(v);
+      if(g==='start'){
+        if(v==='cricket'){settings.gameType='cricket';}
+        else{settings.gameType='x01';settings.start=parseInt(v);}
+        document.getElementById('outRow').style.display=settings.gameType==='cricket'?'none':'block';
+        document.getElementById('variantRow').style.display=settings.gameType==='cricket'?'block':'none';
+      }
       if(g==='out')settings.out=v;
+      if(g==='cmode')settings.cmode=v;
       if(g==='turns'){settings.turns=v;document.getElementById('turnsStepper').style.display=v==='limite'?'flex':'none';}
       if(g==='order')settings.order=v;
       if(g==='opp'){settings.bot=(v==='bot');document.getElementById('levelRow').style.display=settings.bot?'block':'none';}
@@ -434,11 +487,44 @@ function startGame(){
   if(settings.bot)players.push({id:'bot',name:'Bot',color:'#aab3c0',isBot:true,level:settings.botLevel});
   let ord=players.map((_,i)=>i);
   if(settings.order==='random'){for(let i=ord.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[ord[i],ord[j]]=[ord[j],ord[i]];}}
-  G={start:settings.start,out:settings.out,
+  G={type:settings.gameType,start:settings.start,out:settings.out,cricketMode:settings.cmode,
      maxTurns:settings.turns==='limite'?settings.maxTurns:null,
      players, order:ord, n:ord.length,
      committed:[], current:[], mod:1, finished:false, winnerPos:null, endReason:null};
-  go('game');renderGame();maybeBotTurn();
+  go(G.type==='cricket'?'cricket':'game');render();maybeBotTurn();
+}
+function render(){if(G&&G.type==='cricket')renderCricket();else renderGame();}
+/* ============ CRICKET ENGINE (Étape 3) ============ */
+const CRICKET_TARGETS=[20,19,18,17,16,15,25];
+function cricketCompute(includeCurrent){
+  const n=G.n,marks={},scores={};
+  for(let k=0;k<n;k++){marks[k]={};CRICKET_TARGETS.forEach(t=>marks[k][t]=0);scores[k]=0;}
+  const seq=[];
+  G.committed.forEach((turn,i)=>{const pos=i%n;turn.darts.forEach(d=>seq.push([pos,d]));});
+  if(includeCurrent){const pos=G.committed.length%n;G.current.forEach(d=>seq.push([pos,d]));}
+  for(const [pos,d] of seq){
+    const t=d.num===0?null:(d.num===25?25:d.num);
+    if(t===null||CRICKET_TARGETS.indexOf(t)<0)continue;
+    const cur=marks[pos][t],toClose=3-cur,closeAdd=Math.min(d.mult,toClose);
+    marks[pos][t]=cur+closeAdd;
+    const scoringHits=d.mult-closeAdd;
+    if(scoringHits>0&&marks[pos][t]===3){
+      let openOpp=false;for(let q=0;q<n;q++){if(q!==pos&&marks[q][t]<3){openOpp=true;break;}}
+      if(openOpp){const pts=scoringHits*t;
+        if(G.cricketMode==='cutthroat'){for(let q=0;q<n;q++){if(q!==pos&&marks[q][t]<3)scores[q]+=pts;}}
+        else scores[pos]+=pts;}
+    }
+  }
+  return {marks,scores};
+}
+function cricketAllClosed(marks,pos){return CRICKET_TARGETS.every(t=>marks[pos][t]===3);}
+function evalCricket(){
+  const st=cricketCompute(true),pos=G.committed.length%G.n;
+  if(!cricketAllClosed(st.marks,pos))return false;
+  const others=G.order.map((_,k)=>k).filter(k=>k!==pos).map(k=>st.scores[k]);
+  const win=G.cricketMode==='cutthroat'?others.every(s=>st.scores[pos]<=s):others.every(s=>st.scores[pos]>=s);
+  if(win){commitTurn(false);G.finished=true;G.winnerPos=pos;G.endReason='cricket';finishGame();return true;}
+  return false;
 }
 // remaining for a player order-position
 function remainingFor(pos){let r=G.start;G.committed.forEach((t,idx)=>{if(idx%G.n===pos)r-=t.scored;});return r;}
@@ -453,12 +539,13 @@ function pressNum(num){
   if(G.finished)return;
   if(G.current.length>=3)return;
   let mult=G.mod;
-  if(num===25&&mult===3){toast('Triple 25 impossible');G.mod=1;renderGame();return;}
+  if(num===25&&mult===3){toast('Triple Bull impossible');G.mod=1;render();return;}
   if(num===0)mult=1;
   const d={num,mult};
   G.current.push(d);
   G.mod=1;
-  // evaluate
+  if(G.type==='cricket'){ if(!evalCricket())render(); return; }
+  // evaluate (X01)
   const pos=currentPos();
   const tentative=remainingFor(pos)-turnSum(G.current);
   let bust=false,win=false;
@@ -469,7 +556,7 @@ function pressNum(num){
   } else { if(tentative===0)win=true; }
   if(win){commitTurn(false);G.finished=true;G.winnerPos=pos;G.endReason='checkout';finishGame();return;}
   if(bust){commitTurn(true);toast('Bust ! Volée annulée');afterTurnAdvance();return;}
-  renderGame();
+  render();
 }
 function endTurn(){
   if(botBusy && !_fromBot)return;
@@ -486,29 +573,31 @@ function afterTurnAdvance(){
   // turn limit check: each player has played maxTurns full rounds
   if(G.maxTurns && G.committed.length>=G.maxTurns*G.n){
     G.finished=true;G.endReason='turns';
-    // winner = lowest remaining
-    let best=Infinity,bp=0;
-    for(let p=0;p<G.n;p++){const r=remainingFor(p);if(r<best){best=r;bp=p;}}
-    G.winnerPos=bp;finishGame();return;
+    if(G.type==='cricket'){
+      const st=cricketCompute(false);
+      const closed=k=>CRICKET_TARGETS.filter(t=>st.marks[k][t]===3).length;
+      let bp=0,bestC=-1,bestS=null;
+      for(let k=0;k<G.n;k++){const c=closed(k),s=st.scores[k];
+        const better=(bestS===null)||c>bestC||(c===bestC&&(G.cricketMode==='cutthroat'?s<bestS:s>bestS));
+        if(better){bestC=c;bestS=s;bp=k;}}
+      G.winnerPos=bp;
+    } else {
+      let best=Infinity,bp=0;for(let p=0;p<G.n;p++){const r=remainingFor(p);if(r<best){best=r;bp=p;}}G.winnerPos=bp;
+    }
+    finishGame();return;
   }
-  renderGame();
+  render();
   maybeBotTurn();
 }
 function undo(){
-  if(botBusy)return;
+  if(botBusy||!G)return;
   if(G.finished){G.finished=false;G.winnerPos=null;G.endReason=null;}
-  if(G.current.length>0){G.current.pop();G.mod=1;renderGame();maybeBotTurn();return;}
-  // pull back last committed turn into current, remove its last dart
-  if(G.committed.length>0){
-    const t=G.committed.pop();
-    G.current=t.darts.slice();
-    if(G.current.length>0)G.current.pop();
-    G.mod=1;
-    if(document.getElementById('game').classList.contains('on'))renderGame();else go('game');
-    maybeBotTurn();
-    return;
-  }
-  // nothing to undo
+  if(G.current.length>0){G.current.pop();G.mod=1;}
+  else if(G.committed.length>0){const t=G.committed.pop();G.current=t.darts.slice();if(G.current.length>0)G.current.pop();G.mod=1;}
+  else return;
+  const scr=G.type==='cricket'?'cricket':'game';
+  if(!document.getElementById(scr).classList.contains('on'))go(scr);
+  render();maybeBotTurn();
 }
 function finishGame(){
   const winner=G.players[G.order[G.winnerPos]];
@@ -564,23 +653,70 @@ function renderGame(){
   if(botTurn){document.getElementById('whoTurn').textContent='🤖 '+p.name+' joue';document.getElementById('whoTurn').style.color=p.color;ll.textContent='réfléchit…';ll.className='live think';}
 }
 function escapeHtml(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
-function setMod(m){if(G.finished)return;G.mod=(G.mod===m)?1:m;renderGame();}
+/* ============ CRICKET RENDER ============ */
+function cricketGlyph(m){if(m<=0)return '<span style="color:var(--grey)">·</span>';
+  const cls=m>=3?'mkc':'mko';return `<span class="${cls}">${'✗'.repeat(m)}</span>`;}
+function renderCricket(){
+  const st=cricketCompute(true);const pos=currentPos();const p=curPlayer();
+  // turnbar with scores
+  const tb=document.getElementById('cturnbar');tb.innerHTML='';
+  G.order.forEach((pi,k)=>{const pl=G.players[pi];const div=document.createElement('div');div.className='tb'+(k===pos?' act':'');
+    div.innerHTML=`<div class="nm" style="color:${k===pos?pl.color:''}">${escapeHtml(pl.name)}</div><div class="sc">${st.scores[k]}</div>`;tb.appendChild(div);});
+  // who
+  document.getElementById('cwho').textContent='À '+p.name+' de jouer'+(G.cricketMode==='cutthroat'?' · coupe-gorge (plus bas gagne)':'');
+  document.getElementById('cwho').style.color=p.color;
+  // table
+  let html='<tr><th>N°</th>'+G.order.map((pi,k)=>`<th style="color:${k===pos?G.players[pi].color:''}">${escapeHtml(G.players[pi].name)}</th>`).join('')+'</tr>';
+  CRICKET_TARGETS.forEach(t=>{html+=`<tr><td class="numc">${t===25?'Bull':t}</td>`+
+    G.order.map((pi,k)=>`<td>${cricketGlyph(st.marks[k][t])}</td>`).join('')+'</tr>';});
+  html+=`<tr><td style="color:var(--muted)">Pts</td>`+G.order.map((pi,k)=>`<td class="numc">${st.scores[k]}</td>`).join('')+'</tr>';
+  document.getElementById('cricktable').innerHTML=html;
+  // dart slots
+  const ds=document.getElementById('cdartslots');ds.innerHTML='';
+  for(let i=0;i<3;i++){const d=G.current[i];const cur=(i===G.current.length);
+    const div=document.createElement('div');div.className='slot'+(d?' done':'')+(cur&&!d?' cur':'');
+    div.innerHTML=`<span class="lab">Flèche ${i+1}</span><span class="val">${d?dartLabel(d):(cur?'…':'–')}</span>`;ds.appendChild(div);}
+  // mods
+  document.getElementById('cmodD').classList.toggle('on',G.mod===2);
+  document.getElementById('cmodT').classList.toggle('on',G.mod===3);
+  // numgrid 20..15, Bull, Raté
+  const ng=document.getElementById('cnumgrid');ng.innerHTML='';
+  [20,19,18,17,16,15].forEach(t=>{const b=document.createElement('div');b.className='num';b.textContent=t;b.onclick=()=>pressNum(t);ng.appendChild(b);});
+  const bull=document.createElement('div');bull.className='num bull'+(G.mod===3?' dis':'');bull.textContent='Bull';bull.onclick=()=>pressNum(25);ng.appendChild(bull);
+  const miss=document.createElement('div');miss.className='num miss';miss.textContent='Raté ✗';miss.onclick=()=>pressNum(0);ng.appendChild(miss);
+  // buttons
+  const full=G.current.length>=3;
+  document.getElementById('cundoBtn').disabled=(G.current.length===0&&G.committed.length===0);
+  document.getElementById('cendTurnBtn').textContent=full?'✓ Tour terminé':(G.current.length?'✓ Terminer la volée':'Passer mon tour');
+  // bot
+  const botTurn=curIsBot()&&!G.finished;
+  document.getElementById('cricket').classList.toggle('botturn',botTurn);
+  if(botTurn){document.getElementById('cwho').textContent='🤖 '+p.name+' joue — réfléchit…';document.getElementById('cwho').style.color=p.color;}
+}
+function setMod(m){if((botBusy&&!_fromBot)||G.finished)return;G.mod=(G.mod===m)?1:m;render();}
 
 /* ============ WIN ============ */
 function renderWin(){
   const winner=G.players[G.order[G.winnerPos]];
   document.getElementById('winName').textContent=winner.name+' a gagné !';
+  const medals=['🥇','🥈','🥉'];const wrap=document.getElementById('winRanking');wrap.innerHTML='';
   let sub='';
-  if(G.endReason==='checkout'){const turnsPlayed=Math.ceil((G.committed.length)/G.n);sub=G.start+' → 0';}
-  else if(G.endReason==='turns')sub='Limite de '+G.maxTurns+' tours atteinte — plus petit score restant';
+  if(G.type==='cricket'){
+    const st=cricketCompute(false);
+    sub=(G.cricketMode==='cutthroat'?'Cricket coupe-gorge':'Cricket')+(G.endReason==='turns'?' · limite de tours':'');
+    const arr=G.order.map((pi,k)=>({name:G.players[pi].name,score:st.scores[k]}));
+    arr.sort((a,b)=>G.cricketMode==='cutthroat'?a.score-b.score:b.score-a.score);
+    arr.forEach((r,i)=>{const div=document.createElement('div');div.className='statline';
+      div.innerHTML=`<span>${medals[i]||'  '} ${escapeHtml(r.name)}</span><b>${r.score} pts</b>`;wrap.appendChild(div);});
+  } else {
+    if(G.endReason==='checkout')sub=G.start+' → 0';
+    else if(G.endReason==='turns')sub='Limite de '+G.maxTurns+' tours atteinte — plus petit score restant';
+    const arr=G.order.map((pi,k)=>({name:G.players[pi].name,rem:remainingFor(k)}));
+    arr.sort((a,b)=>a.rem-b.rem);
+    arr.forEach((r,i)=>{const div=document.createElement('div');div.className='statline';
+      div.innerHTML=`<span>${medals[i]||'  '} ${escapeHtml(r.name)}</span><b>${r.rem===0?'fini ✓':r.rem+' restants'}</b>`;wrap.appendChild(div);});
+  }
   document.getElementById('winSub').textContent=sub;
-  // ranking by remaining asc
-  const arr=G.order.map((pi,k)=>({name:G.players[pi].name,color:G.players[pi].color,rem:remainingFor(k)}));
-  arr.sort((a,b)=>a.rem-b.rem);
-  const medals=['🥇','🥈','🥉'];
-  const wrap=document.getElementById('winRanking');wrap.innerHTML='';
-  arr.forEach((r,i)=>{const div=document.createElement('div');div.className='statline';
-    div.innerHTML=`<span>${medals[i]||'  '} ${escapeHtml(r.name)}</span><b>${r.rem===0?'fini ✓':r.rem+' restants'}</b>`;wrap.appendChild(div);});
 }
 function replay(){startGame();}
 
@@ -629,16 +765,25 @@ function botSimulate(target,diff){
   if(target.mult===2){return {num:target.num,mult:Math.random()<p.double?2:1};}
   return {num:target.num,mult:1};
 }
+function botCricketTarget(pos,marks,scores,diff){
+  // 1) close own open numbers, highest value first
+  for(const t of CRICKET_TARGETS){if(marks[pos][t]<3)return {num:t,mult:t===25?(diff==='debutant'?1:2):(diff==='debutant'?1:3)};}
+  // 2) all closed: score where an opponent is still open, highest value
+  for(const t of CRICKET_TARGETS){let opp=false;for(let q=0;q<G.n;q++){if(q!==pos&&marks[q][t]<3){opp=true;break;}}if(opp)return {num:t,mult:t===25?2:3};}
+  return {num:20,mult:1};
+}
 function delay(ms){return new Promise(r=>setTimeout(r,ms));}
 function maybeBotTurn(){if(botBusy||!G||G.finished)return;if(curIsBot())botPlayTurn();}
 async function botPlayTurn(){
-  botBusy=true;renderGame();
+  botBusy=true;render();
   const lvl=G.players[G.order[currentPos()]].level||'confirme';
   await delay(650);
   for(let i=0;i<3;i++){
     if(G.finished||!curIsBot())break;
-    const pos=currentPos();const live=remainingFor(pos)-turnSum(G.current);
-    const target=botPickTarget(live,G.out,lvl);
+    const pos=currentPos();
+    let target;
+    if(G.type==='cricket'){const st=cricketCompute(true);target=botCricketTarget(pos,st.marks,st.scores,lvl);}
+    else{const live=remainingFor(pos)-turnSum(G.current);target=botPickTarget(live,G.out,lvl);}
     const actual=botSimulate(target,lvl);
     _fromBot=true;pressNum(actual.num,actual.mult);_fromBot=false;
     await delay(780);
@@ -647,7 +792,7 @@ async function botPlayTurn(){
   }
   if(!G.finished&&curIsBot()&&G.current.length>0){_fromBot=true;endTurn();_fromBot=false;}
   botBusy=false;
-  if(G&&!G.finished)renderGame();
+  if(G&&!G.finished)render();
   maybeBotTurn();
 }
 
