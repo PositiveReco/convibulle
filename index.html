@@ -128,12 +128,12 @@
     <div class="stack">
       <button class="btn" onclick="go('settings')">🎯 Partie locale</button>
       <button class="btn sec" onclick="toast('Le mode à distance arrive à une prochaine étape 🙂')">🌐 Jouer à distance</button>
-      <button class="btn ghost" onclick="go('players')">👥 Joueurs</button>
+      <button class="btn ghost" onclick="go('stats')">👥 Joueurs &amp; stats</button>
     </div>
     <div class="spacer"></div>
     <button id="installBtn" class="btn install" style="display:none;" onclick="installApp()">⤓ Installer l'app sur l'écran d'accueil</button>
     <div id="lastGame" class="muted" style="text-align:center;margin-top:10px;"></div>
-    <div class="muted" style="text-align:center;font-size:10px;opacity:.5;margin-top:6px;">v1.0</div>
+    <div class="muted" style="text-align:center;font-size:10px;opacity:.5;margin-top:6px;">v1.1</div>
   </section>
 
   <!-- SETTINGS -->
@@ -233,6 +233,29 @@
     </div>
   </section>
 
+  <!-- STATS HUB -->
+  <section id="stats" class="screen">
+    <div class="topbar"><button class="back" onclick="go('home')">◀ Accueil</button><b>Joueurs &amp; stats</b><span style="width:50px"></span></div>
+    <div id="statsList" class="stack"></div>
+    <button class="btn sec" style="margin-top:12px;" onclick="go('history')">📜 Historique des parties</button>
+    <div class="spacer"></div>
+    <div class="muted" style="text-align:center;font-size:12px;">Pour ajouter ou retirer des joueurs, lance une partie locale.</div>
+  </section>
+
+  <!-- PROFILE -->
+  <section id="profile" class="screen">
+    <div class="topbar"><button class="back" onclick="go('stats')">◀ Joueurs</button><b>Profil</b><span style="width:50px"></span></div>
+    <div id="profileBody"></div>
+  </section>
+
+  <!-- HISTORY -->
+  <section id="history" class="screen">
+    <div class="topbar"><button class="back" onclick="go('stats')">◀ Joueurs</button><b>Historique</b><span style="width:50px"></span></div>
+    <div id="historyList" class="stack"></div>
+    <div class="spacer"></div>
+    <button class="btn ghost" id="clearHistBtn" style="margin-top:10px;" onclick="clearHistory()">Effacer l'historique</button>
+  </section>
+
   <div id="toast" class="toast"></div>
 </div>
 
@@ -254,14 +277,86 @@ let roster=loadRoster();          // [{name,color}]
 let settings={start:501,out:'simple',turns:'illimite',maxTurns:20,order:'random',bot:false,botLevel:'confirme'};
 let G=null;                        // active game
 
-function loadRoster(){try{const r=JSON.parse(localStorage.getItem('cb_roster'));if(Array.isArray(r)&&r.length)return r;}catch(e){}
-  return [{name:'Joueur 1',color:COLORS[0]},{name:'Joueur 2',color:COLORS[1]}];}
+function uid(){return 'p_'+Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4);}
+function loadRoster(){let r=[];try{r=JSON.parse(localStorage.getItem('cb_roster'))||[];}catch(e){}
+  if(!Array.isArray(r)||!r.length)r=[{name:'Joueur 1',color:COLORS[0]},{name:'Joueur 2',color:COLORS[1]}];
+  return r.map((p,i)=>({id:p.id||uid(),name:p.name||('Joueur '+(i+1)),color:p.color||COLORS[i%COLORS.length]}));}
 function saveRoster(){try{localStorage.setItem('cb_roster',JSON.stringify(roster));}catch(e){}}
+/* ============ GAMES STORAGE (Étape 2) ============ */
+function loadGames(){try{return JSON.parse(localStorage.getItem('cb_games'))||[];}catch(e){return [];}}
+function statsFor(id){const games=loadGames();let gp=0,gw=0,pts=0,turns=0,best=0;
+  games.forEach(g=>{const me=(g.players||[]).find(p=>p.id===id);if(me){gp++;if(me.won)gw++;pts+=me.points||0;turns+=me.turns||0;best=Math.max(best,me.best||0);}});
+  return {gp,gw,winRate:gp?Math.round(gw*100/gp):0,avg:turns?+(pts/turns).toFixed(1):0,best};}
+function recordGame(){try{
+  const n=G.n;
+  const players=G.order.map((pi,k)=>{const ta=G.committed.filter((t,i)=>i%n===k);
+    const points=ta.reduce((s,t)=>s+t.scored,0),darts=ta.reduce((s,t)=>s+t.darts.length,0),best=ta.reduce((m,t)=>Math.max(m,t.scored),0),turns=ta.length;
+    const p=G.players[pi];return {id:p.id||('p_'+p.name),name:p.name,isBot:!!p.isBot,won:k===G.winnerPos,points,darts,turns,best,remaining:remainingFor(k),avg:turns?+(points/turns).toFixed(1):0};});
+  const rec={id:Date.now(),date:new Date().toISOString(),type:String(G.start),out:G.out,endReason:G.endReason,players,winnerName:G.players[G.order[G.winnerPos]].name};
+  const games=loadGames();games.unshift(rec);if(games.length>200)games.length=200;
+  localStorage.setItem('cb_games',JSON.stringify(games));
+}catch(e){}}
+/* ---- stats screens ---- */
+function renderStats(){
+  const list=document.getElementById('statsList');list.innerHTML='';
+  if(!roster.length){list.innerHTML='<div class="muted" style="text-align:center;margin-top:20px;">Aucun joueur pour l\'instant.<br>Ajoute des joueurs en lançant une partie locale.</div>';return;}
+  roster.forEach(p=>{const s=statsFor(p.id);
+    const card=document.createElement('div');card.className='pcard';card.style.cursor='pointer';card.onclick=()=>openProfile(p.id);
+    card.innerHTML=`<span class="av" style="background:${p.color}">${(p.name||'?').charAt(0).toUpperCase()}</span>
+      <div style="flex:1"><div style="font-weight:700">${escapeHtml(p.name)}</div>
+      <div class="muted" style="font-size:12px">${s.gp} partie${s.gp>1?'s':''} · ${s.winRate}% gagnées · moy ${s.avg}</div></div>
+      <span class="muted" style="font-size:20px">›</span>`;
+    list.appendChild(card);});
+}
+function openProfile(id){
+  const p=roster.find(x=>x.id===id)||{name:'Joueur',color:'#aab3c0'};
+  const s=statsFor(id);
+  const games=loadGames().filter(g=>(g.players||[]).some(pp=>pp.id===id)).slice(0,8);
+  let recent=games.map(g=>{const me=g.players.find(pp=>pp.id===id);const d=new Date(g.date);
+    const ds=d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'});
+    return `<div class="statline"><span>${ds} · ${g.type}${g.out==='double'?' (double)':''}</span><b style="color:${me.won?'var(--green)':'var(--muted)'}">${me.won?'🏆 gagné':me.remaining+' restants'}</b></div>`;}).join('');
+  if(!games.length)recent='<div class="muted" style="text-align:center">Pas encore de partie enregistrée.</div>';
+  const ini=(p.name||'?').charAt(0).toUpperCase();
+  document.getElementById('profileBody').innerHTML=`
+    <div style="text-align:center;margin-bottom:14px;">
+      <div class="av" style="width:66px;height:66px;font-size:27px;background:${p.color};margin:0 auto 8px;">${ini}</div>
+      <h2 class="t">${escapeHtml(p.name)}</h2>
+      <div class="muted">${s.gp} partie${s.gp>1?'s':''} jouée${s.gp>1?'s':''}</div>
+    </div>
+    <div class="stack">
+      <div class="statline"><span>Parties gagnées</span><b>${s.gw}</b></div>
+      <div class="statline"><span>Taux de victoire</span><b>${s.winRate}%</b></div>
+      <div class="statline"><span>Moyenne / volée</span><b>${s.avg}</b></div>
+      <div class="statline"><span>Meilleure volée</span><b>${s.best}</b></div>
+    </div>
+    <div style="margin-top:14px;"><div class="bar"><i style="width:${s.winRate}%"></i></div></div>
+    <div class="field-label">Dernières parties</div>
+    <div class="stack">${recent}</div>`;
+  go('profile');
+}
+function renderHistory(){
+  const list=document.getElementById('historyList');const games=loadGames();list.innerHTML='';
+  document.getElementById('clearHistBtn').style.display=games.length?'block':'none';
+  if(!games.length){list.innerHTML='<div class="muted" style="text-align:center;margin-top:20px;">Aucune partie enregistrée pour l\'instant.</div>';return;}
+  games.forEach(g=>{const d=new Date(g.date);
+    const ds=d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit'})+' · '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+    const names=(g.players||[]).map(p=>p.won?('🏆 '+p.name):p.name).join(', ');
+    const card=document.createElement('div');card.className='pcard';
+    card.innerHTML=`<div style="flex:1"><div style="font-weight:700">${g.type}${g.out==='double'?' · double':''} — ${escapeHtml(g.winnerName)} gagne</div>
+      <div class="muted" style="font-size:12px">${ds} · ${escapeHtml(names)}</div></div>`;
+    list.appendChild(card);});
+}
+let _clearArmed=false;
+function clearHistory(){const b=document.getElementById('clearHistBtn');
+  if(!_clearArmed){_clearArmed=true;b.textContent='Appuie encore pour confirmer';setTimeout(()=>{_clearArmed=false;b.textContent='Effacer l\'historique';},3000);return;}
+  localStorage.removeItem('cb_games');_clearArmed=false;b.textContent='Effacer l\'historique';renderHistory();toast('Historique effacé');}
 
 /* ============ NAV ============ */
 function go(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));document.getElementById(id).classList.add('on');
   if(id==='players')renderPlayers();
   if(id==='home')renderHome();
+  if(id==='stats')renderStats();
+  if(id==='history')renderHistory();
 }
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2200);}
 
@@ -317,16 +412,16 @@ function renderPlayers(){
     ? 'Ordre : '+names.join(' → '):'';
 }
 function addPlayer(){if(roster.length>=8){toast('8 joueurs maximum');return;}
-  roster.push({name:'Joueur '+(roster.length+1),color:COLORS[roster.length%COLORS.length]});saveRoster();renderPlayers();}
+  roster.push({id:uid(),name:'Joueur '+(roster.length+1),color:COLORS[roster.length%COLORS.length]});saveRoster();renderPlayers();}
 function removeP(i){roster.splice(i,1);saveRoster();renderPlayers();}
 function renameP(i,v){roster[i].name=v;saveRoster();}
 function moveP(i,d){const j=i+d;if(j<0||j>=roster.length)return;[roster[i],roster[j]]=[roster[j],roster[i]];saveRoster();renderPlayers();}
 
 /* ============ GAME ENGINE ============ */
 function startGame(){
-  let players=roster.map((p,i)=>({name:(p.name||('Joueur '+(i+1))).trim()||('Joueur '+(i+1)),color:p.color,isBot:false}));
+  let players=roster.map((p,i)=>({id:p.id,name:(p.name||('Joueur '+(i+1))).trim()||('Joueur '+(i+1)),color:p.color,isBot:false}));
   if(players.length<1){toast('Ajoute au moins un joueur');return;}
-  if(settings.bot)players.push({name:'Bot',color:'#aab3c0',isBot:true,level:settings.botLevel});
+  if(settings.bot)players.push({id:'bot',name:'Bot',color:'#aab3c0',isBot:true,level:settings.botLevel});
   let ord=players.map((_,i)=>i);
   if(settings.order==='random'){for(let i=ord.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[ord[i],ord[j]]=[ord[j],ord[i]];}}
   G={start:settings.start,out:settings.out,
@@ -408,6 +503,7 @@ function undo(){
 function finishGame(){
   const winner=G.players[G.order[G.winnerPos]];
   localStorage.setItem('cb_last',winner.name+' a gagné 🏆');
+  recordGame();
   renderWin();go('win');
 }
 
