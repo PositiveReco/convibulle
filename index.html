@@ -82,6 +82,8 @@
   .tb-turns{flex:0 0 auto;margin-left:auto;display:flex;flex-direction:column;justify-content:center;text-align:center;padding:6px 11px;border-radius:9px;background:var(--card);border:1px dashed var(--champ-deep);}
   .tb-turns .tt-lab{font-size:9px;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);}
   .tb-turns .tt-val{font-size:16px;font-weight:800;color:var(--champ);line-height:1.05;}
+  .tb-quit{flex:0 0 auto;display:flex;align-items:center;justify-content:center;padding:0 12px;border-radius:9px;background:var(--card);border:1px solid var(--line);color:var(--muted);font-size:15px;font-weight:800;line-height:1;cursor:pointer;}
+  .tb-quit:hover{border-color:#c0556a;color:#e8889a;background:rgba(192,85,106,.12);}
   /* Bas de page "soutien" (repris de PositiveReco) */
   .cb-footer{text-align:center;margin-top:24px;padding-bottom:6px;}
   .cb-foot-tag{font-size:12px;color:var(--muted);margin:0 0 10px;}
@@ -267,7 +269,7 @@
         <a class="cb-foot-beer" href="https://buymeacoffee.com/jeremycesar" target="_blank" rel="noopener noreferrer">🥂 Offrir une petite coupe</a>
         <a class="cb-foot-mail" href="mailto:positivereco.app@gmail.com?subject=Un%20petit%20mot%20pour%20ConviBulle%20%F0%9F%8E%AF">💌 Écrire un mot</a>
       </div>
-      <p class="cb-foot-ver">ConviBulle v1.7.3 · créé par Jeremy <span class="cb-heart">♥</span></p>
+      <p class="cb-foot-ver">ConviBulle v1.7.4 · créé par Jeremy <span class="cb-heart">♥</span></p>
     </footer>
   </section>
 
@@ -850,11 +852,20 @@ function remainingFor(pos){let r=G.start;G.committed.forEach((t,idx)=>{if(idx%G.
 function currentPos(){return G.committed.length%G.n;}
 function curPlayer(){return G.players[G.order[currentPos()]];}
 function appendTurnCounter(bar){
-  if(!G.maxTurns)return;
-  const cur=Math.min(G.maxTurns,Math.floor(G.committed.length/G.n)+1);
+  const cur=Math.floor(G.committed.length/G.n)+1;
+  let val;
+  if(G.maxTurns)val=Math.min(G.maxTurns,cur)+'/'+G.maxTurns;
+  else if(G.type==='siege')val=''+cur; // siège : pas de limite, on affiche juste le numéro du tour
+  else return;
   const div=document.createElement('div');div.className='tb-turns';
-  div.innerHTML=`<span class="tt-lab">Tour</span><span class="tt-val">${cur}/${G.maxTurns}</span>`;
+  div.innerHTML=`<span class="tt-lab">Tour</span><span class="tt-val">${val}</span>`;
   bar.appendChild(div);
+}
+function prependQuitBtn(bar){
+  const b=document.createElement('button');b.className='tb-quit';b.type='button';
+  b.textContent='✕';b.title='Quitter la partie';b.setAttribute('aria-label','Quitter la partie');
+  b.onclick=quitGame;
+  bar.appendChild(b);
 }
 function dartPoints(d){return d.num*d.mult;}
 function dartLabel(d){if(d.num===0)return '✗';if(d.num===25)return d.mult===2?'Bull':'25';return (d.mult===1?'':d.mult===2?'D':'T')+d.num;}
@@ -924,9 +935,15 @@ function undo(){
   if(G.current.length>0){G.current.pop();G.mod=1;}
   else if(G.committed.length>0){const t=G.committed.pop();G.current=t.darts.slice();if(G.current.length>0)G.current.pop();G.mod=1;}
   else return;
-  const scr=G.type==='cricket'?'cricket':'game';
+  const scr=G.type==='cricket'?'cricket':(G.type==='siege'?'siege':'game');
   if(!document.getElementById(scr).classList.contains('on'))go(scr);
   render();maybeBotTurn();
+}
+function quitGame(){
+  if(botBusy)return;
+  if(!confirm('Quitter la partie en cours ?'))return;
+  leaveRoom();
+  go('home');
 }
 function finishGame(){
   const winner=G.players[G.order[G.winnerPos]];
@@ -941,6 +958,7 @@ function renderGame(){
   const pos=currentPos();
   // turnbar
   const tbar=document.getElementById('turnbar');tbar.innerHTML='';
+  prependQuitBtn(tbar);
   G.order.forEach((pi,k)=>{
     const p=G.players[pi];const div=document.createElement('div');
     div.className='tb'+(k===pos?' act':'');
@@ -995,6 +1013,7 @@ function renderCricket(){
   const st=cricketCompute(true);const pos=currentPos();const p=curPlayer();
   // turnbar with scores
   const tb=document.getElementById('cturnbar');tb.innerHTML='';
+  prependQuitBtn(tb);
   G.order.forEach((pi,k)=>{const pl=G.players[pi];const div=document.createElement('div');div.className='tb'+(k===pos?' act':'');
     div.innerHTML=`<div class="nm" style="color:${k===pos?pl.color:''}">${escapeHtml(pl.name)}</div><div class="sc">${st.scores[k]}</div>`;tb.appendChild(div);});
   appendTurnCounter(tb);
@@ -1108,6 +1127,7 @@ function siegeState(k,hpArr){const c=G.castles[k];const allDown=c.every((p,idx)=
 function renderSiege(){
   const st=siegeCompute(true);const pos=currentPos();const p=curPlayer();const tgt=(pos+1)%G.n;
   const tb=document.getElementById('sturnbar');tb.innerHTML='';
+  prependQuitBtn(tb);
   G.order.forEach((pi,k)=>{const left=G.castles[k].filter((pp,idx)=>st.hp[k][idx]>0).length;
     const div=document.createElement('div');div.className='tb'+(k===pos?' act':'');
     div.innerHTML=`<div class="nm" style="color:${k===pos?G.players[pi].color:''}">${escapeHtml(G.players[pi].name)}</div><div class="sc">🏰 ${left}/${G.castles[k].length}</div>`;tb.appendChild(div);});
