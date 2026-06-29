@@ -217,11 +217,12 @@
   @keyframes shakecastle{0%,100%{transform:translateX(0)}15%{transform:translateX(-5px) rotate(-.4deg)}30%{transform:translateX(5px) rotate(.4deg)}45%{transform:translateX(-4px)}60%{transform:translateX(4px)}78%{transform:translateX(-2px)}}
   .castle-shake{animation:shakecastle .42s ease-in-out;}
   @media (orientation:landscape) and (min-width:680px){
-    #siege .castlewrap svg{height:45vh;width:auto;max-width:100%;margin:0 auto;}
+    #siege .castlewrap svg{height:41vh;width:auto;max-width:100%;margin:0 auto;}
     #siege .castlepanel{padding:5px 7px;margin-bottom:6px;}
     #siege .cp-head{margin-bottom:4px;}
     #siege .who{margin:3px 0;font-size:12px;}
-    #siege .castlesum{flex-wrap:nowrap;overflow-x:auto;}
+    #siege .castlesum{gap:5px;}
+    #siege .cs-item{padding:2px 6px;font-size:13px;}
   }
   #s-right{display:flex;flex-direction:column;}
 </style>
@@ -247,7 +248,7 @@
     <div class="spacer"></div>
     <button id="installBtn" class="btn install" style="display:none;" onclick="installApp()">⤓ Installer l'app sur l'écran d'accueil</button>
     <div id="lastGame" class="muted" style="text-align:center;margin-top:10px;"></div>
-    <div class="muted" style="text-align:center;font-size:10px;opacity:.5;margin-top:6px;">v1.7.1</div>
+    <div class="muted" style="text-align:center;font-size:10px;opacity:.5;margin-top:6px;">v1.7.2</div>
   </section>
 
   <!-- SETTINGS -->
@@ -1033,7 +1034,7 @@ function s_merlons(x,y,w,h,n){const seg=w/(n*2-1);let pts=[[x,y+h]];let cx=x,up=
 function s_badge(x,y,part){
   if(part.dead)return `<g><circle cx="${x}" cy="${y}" r="14" fill="#15120a" stroke="#6b3030" stroke-width="1.5"/><text x="${x}" y="${y+6}" text-anchor="middle" font-size="16">💥</text></g>`;
   if(part.locked)return `<g><rect x="${x-17}" y="${y-13}" width="34" height="26" rx="7" fill="#15120a" stroke="#C9A94E" stroke-width="1.5"/><text x="${x}" y="${y+6}" text-anchor="middle" font-size="15">🔒</text></g>`;
-  if(part.bull)return `<g><rect x="${x-26}" y="${y-14}" width="52" height="26" rx="7" fill="#15120a" stroke="#E6CC7E" stroke-width="2"/><text x="${x}" y="${y+5}" text-anchor="middle" font-size="13" font-weight="800" fill="#F6E7B0">◎ ${part.min===2?'D.BULL':'BULL'}</text></g>`;
+  if(part.bull)return `<g><rect x="${x-34}" y="${y-14}" width="68" height="26" rx="7" fill="#15120a" stroke="#E6CC7E" stroke-width="2"/><text x="${x}" y="${y+5}" text-anchor="middle" font-size="13" font-weight="800" fill="#F6E7B0">👑 ◎ ${part.min===2?'D.BULL':'BULL'}</text></g>`;
   let hp='';for(let i=0;i<part.max;i++)hp+=`<rect x="${x-part.max*5+i*10}" y="${y+12}" width="7" height="6" rx="1.5" fill="${i<part.hp?'#E6CC7E':'#3a424c'}" stroke="#15120a" stroke-width="0.5"/>`;
   const mult=part.min===2?'<tspan font-size="8" fill="#9aa2ad"> D</tspan>':part.min===3?'<tspan font-size="8" fill="#9aa2ad"> T</tspan>':'';
   return `<g><rect x="${x-18}" y="${y-14}" width="36" height="26" rx="7" fill="#15120a" stroke="#C9A94E" stroke-width="1.6"/><text x="${x}" y="${y+5}" text-anchor="middle" font-size="16" font-weight="800" fill="#F6E7B0">${part.num}${mult}</text>${hp}</g>`;
@@ -1054,9 +1055,9 @@ function drawCastle(P){const w=360,h=260;
     s+=`<rect x="150" y="78" width="60" height="136" fill="url(#stoneDark)" stroke="#3a424c" stroke-width="1.5"/><polygon points="${s_merlons(150,70,60,10,4)}" fill="url(#stoneDark)" stroke="#3a424c" stroke-width="1.2"/><rect x="172" y="120" width="16" height="26" rx="8" fill="#15120a"/>${P.donjon.hp<P.donjon.max?s_crack(166,86,206):''}`;
     s+=s_badge(180,108,P.donjon);
   } else { s+=s_rubble(150,60,214)+s_badge(180,120,P.donjon); }
-  // king — TOUJOURS dessiné, perché en haut (cadenas, puis BULL quand vulnérable)
-  if(P.roi.hp>0)s+=`<line x1="180" y1="50" x2="180" y2="70" stroke="#c9c9c9" stroke-width="2"/><text x="180" y="50" text-anchor="middle" font-size="22">👑</text>`;
-  else s+=`<text x="180" y="52" text-anchor="middle" font-size="20" opacity=".5">💨</text>`;
+  // king — TOUJOURS visible : couronne perchée tant qu'il est protégé, sinon il descend dans le badge « 👑 BULL »
+  if(P.roi.hp>0&&P.roi.locked)s+=`<line x1="180" y1="50" x2="180" y2="70" stroke="#c9c9c9" stroke-width="2"/><text x="180" y="50" text-anchor="middle" font-size="22">👑</text>`;
+  else if(P.roi.hp<=0)s+=`<text x="180" y="52" text-anchor="middle" font-size="20" opacity=".5">💨</text>`;
   s+=s_badge(180,38,P.roi);
   if(P.rempart.hp>0){
     s+=`<rect x="70" y="150" width="220" height="64" fill="url(#stone)" stroke="#3a424c" stroke-width="1.5"/><polygon points="${s_merlons(70,142,220,9,9)}" fill="url(#stone)" stroke="#3a424c" stroke-width="1"/>`;
