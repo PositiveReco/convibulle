@@ -79,6 +79,9 @@
   .tb .nm{font-size:10px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .tb .sc{font-size:17px;font-weight:800;}
   .tb.act{border-color:var(--champ);background:rgba(230,204,126,.14);}
+  .tb-turns{flex:0 0 auto;margin-left:auto;display:flex;flex-direction:column;justify-content:center;text-align:center;padding:6px 11px;border-radius:9px;background:var(--card);border:1px dashed var(--champ-deep);}
+  .tb-turns .tt-lab{font-size:9px;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);}
+  .tb-turns .tt-val{font-size:16px;font-weight:800;color:var(--champ);line-height:1.05;}
   .bigscore{text-align:center;}
   .bigscore .who{font-size:13px;color:var(--champ);font-weight:700;}
   .bigscore .n{font-size:clamp(48px,16vw,84px);font-weight:800;line-height:1;letter-spacing:-2px;}
@@ -248,7 +251,7 @@
     <div class="spacer"></div>
     <button id="installBtn" class="btn install" style="display:none;" onclick="installApp()">⤓ Installer l'app sur l'écran d'accueil</button>
     <div id="lastGame" class="muted" style="text-align:center;margin-top:10px;"></div>
-    <div class="muted" style="text-align:center;font-size:10px;opacity:.5;margin-top:6px;">v1.7.2</div>
+    <div class="muted" style="text-align:center;font-size:10px;opacity:.5;margin-top:6px;">v1.7.3</div>
   </section>
 
   <!-- SETTINGS -->
@@ -466,8 +469,9 @@
       <button class="btn sec" id="shareBtn" style="width:auto;display:inline-block;padding:9px 16px;margin-top:6px;" onclick="shareCode()">🔗 Partager / Copier</button>
     </div>
     <div id="hostConfig" style="display:none;margin-top:12px;">
-      <div class="field-label">Mode</div>
-      <div class="row" data-group="rmedia">
+      <!-- Mode caméra/audio masqué pour l'instant (réactivable en retirant display:none) -->
+      <div class="field-label" id="rmediaLabel" style="display:none;">Mode</div>
+      <div class="row" data-group="rmedia" id="rmediaRow" style="display:none;">
         <div class="chip on" data-val="none">📊 Sans caméra</div>
         <div class="chip" data-val="video">🎥 Caméra + micro</div>
         <div class="chip" data-val="audio">🎙️ Micro seul</div>
@@ -828,6 +832,13 @@ function evalSiege(){
 function remainingFor(pos){let r=G.start;G.committed.forEach((t,idx)=>{if(idx%G.n===pos)r-=t.scored;});return r;}
 function currentPos(){return G.committed.length%G.n;}
 function curPlayer(){return G.players[G.order[currentPos()]];}
+function appendTurnCounter(bar){
+  if(!G.maxTurns)return;
+  const cur=Math.min(G.maxTurns,Math.floor(G.committed.length/G.n)+1);
+  const div=document.createElement('div');div.className='tb-turns';
+  div.innerHTML=`<span class="tt-lab">Tour</span><span class="tt-val">${cur}/${G.maxTurns}</span>`;
+  bar.appendChild(div);
+}
 function dartPoints(d){return d.num*d.mult;}
 function dartLabel(d){if(d.num===0)return '✗';if(d.num===25)return d.mult===2?'Bull':'25';return (d.mult===1?'':d.mult===2?'D':'T')+d.num;}
 function turnSum(arr){return arr.reduce((s,d)=>s+dartPoints(d),0);}
@@ -919,6 +930,7 @@ function renderGame(){
     div.innerHTML=`<div class="nm" style="color:${k===pos?p.color:''}">${escapeHtml(p.name)}</div><div class="sc">${remainingFor(k)}</div>`;
     tbar.appendChild(div);
   });
+  appendTurnCounter(tbar);
   const p=curPlayer();
   document.getElementById('whoTurn').textContent='À '+p.name+' de jouer';
   document.getElementById('whoTurn').style.color=p.color;
@@ -968,6 +980,7 @@ function renderCricket(){
   const tb=document.getElementById('cturnbar');tb.innerHTML='';
   G.order.forEach((pi,k)=>{const pl=G.players[pi];const div=document.createElement('div');div.className='tb'+(k===pos?' act':'');
     div.innerHTML=`<div class="nm" style="color:${k===pos?pl.color:''}">${escapeHtml(pl.name)}</div><div class="sc">${st.scores[k]}</div>`;tb.appendChild(div);});
+  appendTurnCounter(tb);
   // who
   document.getElementById('cwho').textContent='À '+p.name+' de jouer'+(G.cricketMode==='cutthroat'?' · coupe-gorge (plus bas gagne)':'');
   document.getElementById('cwho').style.color=p.color;
@@ -1081,6 +1094,7 @@ function renderSiege(){
   G.order.forEach((pi,k)=>{const left=G.castles[k].filter((pp,idx)=>st.hp[k][idx]>0).length;
     const div=document.createElement('div');div.className='tb'+(k===pos?' act':'');
     div.innerHTML=`<div class="nm" style="color:${k===pos?G.players[pi].color:''}">${escapeHtml(G.players[pi].name)}</div><div class="sc">🏰 ${left}/${G.castles[k].length}</div>`;tb.appendChild(div);});
+  appendTurnCounter(tb);
   document.getElementById('swho').innerHTML='⚔️ À '+escapeHtml(p.name)+' — attaque le château de <b>'+escapeHtml(G.players[G.order[tgt]].name)+'</b>';
   document.getElementById('swho').style.color=p.color;
   // fixed castles: player order 0 on top, 1 below. Target = drawn castle ; defense = compact strip.
