@@ -157,6 +157,28 @@
   #camThumb{position:fixed;right:10px;bottom:64px;width:104px;height:140px;z-index:55;border-radius:12px;overflow:hidden;border:1px solid var(--champ-deep);background:#111;display:none;cursor:pointer;}
   #camThumbVideo{width:100%;height:100%;object-fit:cover;}
   .thumblabel{position:absolute;bottom:4px;left:6px;font-size:10px;color:#fff;background:rgba(0,0,0,.5);padding:1px 5px;border-radius:6px;}
+  /* siege */
+  .castlegrid{display:flex;flex-direction:column;gap:6px;}
+  .part{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 11px;transition:opacity .25s;}
+  .part.king{border-color:var(--champ-deep);background:rgba(230,204,126,.08);}
+  .part.dead{opacity:.4;}
+  .part.dead .ptarget{color:var(--red);}
+  .part.locked{opacity:.7;}
+  .pemoji{font-size:23px;width:30px;text-align:center;}
+  .pinfo{flex:1;min-width:0;}
+  .plabel{font-weight:700;font-size:14px;display:flex;align-items:center;}
+  .ptarget{font-size:12px;color:var(--champ-bright);}
+  .mbadge{font-size:10px;color:var(--ink);background:var(--champ);border-radius:5px;padding:1px 5px;margin-left:6px;font-weight:800;}
+  .php{display:flex;gap:3px;}
+  .php i{width:12px;height:12px;border-radius:3px;background:var(--card2);border:1px solid var(--line);}
+  .php i.on{background:linear-gradient(180deg,var(--champ-bright),var(--champ-deep));border-color:var(--champ-deep);}
+  .mycastle{margin-top:10px;border-top:1px solid var(--line);padding-top:8px;}
+  .mc-label{font-size:12px;color:var(--muted);margin-bottom:5px;}
+  .mycastle .part{padding:5px 9px;gap:8px;}
+  .mycastle .pemoji{font-size:16px;width:20px;}
+  .mycastle .plabel{font-size:12px;}
+  .mycastle .ptarget{font-size:10px;}
+  .mycastle .php i{width:9px;height:9px;}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -180,7 +202,7 @@
     <div class="spacer"></div>
     <button id="installBtn" class="btn install" style="display:none;" onclick="installApp()">⤓ Installer l'app sur l'écran d'accueil</button>
     <div id="lastGame" class="muted" style="text-align:center;margin-top:10px;"></div>
-    <div class="muted" style="text-align:center;font-size:10px;opacity:.5;margin-top:6px;">v1.5</div>
+    <div class="muted" style="text-align:center;font-size:10px;opacity:.5;margin-top:6px;">v1.6</div>
   </section>
 
   <!-- SETTINGS -->
@@ -191,6 +213,17 @@
       <div class="chip on" data-val="501">501</div>
       <div class="chip" data-val="301">301</div>
       <div class="chip" data-val="cricket">Cricket</div>
+      <div class="chip" data-val="siege">🏰 Siège</div>
+    </div>
+    <div id="siegeRow" style="display:none;">
+      <div class="field-label">Difficulté du siège</div>
+      <div class="row" data-group="sdiff">
+        <div class="chip on" data-val="facile">Facile</div>
+        <div class="chip" data-val="moyen">Moyen</div>
+        <div class="chip" data-val="difficile">Difficile</div>
+        <div class="chip" data-val="expert">Expert</div>
+      </div>
+      <div class="muted" style="font-size:11px;margin-top:5px;">Duel : démolis le château adverse (porte, tours, donjon…) et capture le Roi au Bull. Plus c'est dur, plus il faut des doubles/triples.</div>
     </div>
     <div id="outRow">
       <div class="field-label">Sortie</div>
@@ -295,6 +328,27 @@
           <button class="undo" id="cundoBtn" onclick="undo()">↩︎ Annuler</button>
           <button class="btn" id="cendTurnBtn" onclick="endTurn()">✓ Tour terminé</button>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SIEGE -->
+  <section id="siege" class="screen">
+    <div class="gamewrap">
+      <div class="turnbar" id="sturnbar"></div>
+      <div class="who" id="swho" style="font-size:13px;font-weight:700;margin-bottom:8px;"></div>
+      <div id="enemyCastle" class="castle"></div>
+      <div id="myCastle" class="mycastle"></div>
+      <div style="flex:1"></div>
+      <div class="dartslots" id="sdartslots"></div>
+      <div class="mods">
+        <div class="mod" id="smodD" onclick="setMod(2)">Double</div>
+        <div class="mod" id="smodT" onclick="setMod(3)">Triple</div>
+      </div>
+      <div class="numgrid" id="snumgrid"></div>
+      <div class="act-row">
+        <button class="undo" id="sundoBtn" onclick="undo()">↩︎ Annuler</button>
+        <button class="btn" id="sendTurnBtn" onclick="endTurn()">✓ Tour terminé</button>
       </div>
     </div>
   </section>
@@ -439,7 +493,7 @@ function logoSVG(g){g=g||'#E6CC7E';
 /* ============ STATE ============ */
 const COLORS=['#E6CC7E','#7fb2ff','#46c98a','#ff8f6b','#a98bff','#ff6fae','#5ad0d0','#ffd23f'];
 let roster=loadRoster();          // [{name,color}]
-let settings={gameType:'x01',start:501,out:'simple',cmode:'standard',turns:'illimite',maxTurns:20,order:'random',bot:false,botLevel:'confirme',media:'none'};
+let settings={gameType:'x01',start:501,out:'simple',cmode:'standard',sdiff:'facile',turns:'illimite',maxTurns:20,order:'random',bot:false,botLevel:'confirme',media:'none'};
 let G=null;                        // active game
 
 function uid(){return 'p_'+Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4);}
@@ -462,9 +516,12 @@ function recordGame(){try{
     if(G.type==='cricket'){
       return {id:p.id||('p_'+p.name),name:p.name,isBot:!!p.isBot,won:k===G.winnerPos,points:cst.scores[k],darts,turns,best:0,remaining:cst.scores[k]};
     }
+    if(G.type==='siege'){
+      return {id:p.id||('p_'+p.name),name:p.name,isBot:!!p.isBot,won:k===G.winnerPos,points:0,darts,turns,best:0,remaining:0};
+    }
     const points=ta.reduce((s,t)=>s+t.scored,0),best=ta.reduce((m,t)=>Math.max(m,t.scored),0);
     return {id:p.id||('p_'+p.name),name:p.name,isBot:!!p.isBot,won:k===G.winnerPos,points,darts,turns,best,remaining:remainingFor(k),avg:turns?+(points/turns).toFixed(1):0};});
-  const rec={id:Date.now(),date:new Date().toISOString(),type:G.type==='cricket'?'Cricket':String(G.start),cmode:G.cricketMode,out:G.out,endReason:G.endReason,players,winnerName:G.players[G.order[G.winnerPos]].name};
+  const rec={id:Date.now(),date:new Date().toISOString(),type:G.type==='cricket'?'Cricket':(G.type==='siege'?'Siège':String(G.start)),cmode:G.cricketMode,sdiff:G.sdiff,out:G.out,endReason:G.endReason,players,winnerName:G.players[G.order[G.winnerPos]].name};
   const games=loadGames();games.unshift(rec);if(games.length>200)games.length=200;
   localStorage.setItem('cb_games',JSON.stringify(games));
 }catch(e){}}
@@ -550,11 +607,15 @@ document.querySelectorAll('[data-group]').forEach(grp=>{
       ch.classList.add('on');
       const g=grp.dataset.group,v=ch.dataset.val;
       if(g==='start'){
-        if(v==='cricket'){settings.gameType='cricket';}
+        if(v==='cricket')settings.gameType='cricket';
+        else if(v==='siege')settings.gameType='siege';
         else{settings.gameType='x01';settings.start=parseInt(v);}
-        document.getElementById('outRow').style.display=settings.gameType==='cricket'?'none':'block';
-        document.getElementById('variantRow').style.display=settings.gameType==='cricket'?'block':'none';
+        const gt=settings.gameType;
+        document.getElementById('outRow').style.display=(gt==='x01')?'block':'none';
+        document.getElementById('variantRow').style.display=(gt==='cricket')?'block':'none';
+        document.getElementById('siegeRow').style.display=(gt==='siege')?'block':'none';
       }
+      if(g==='sdiff')settings.sdiff=v;
       if(g==='out')settings.out=v;
       if(g==='cmode')settings.cmode=v;
       if(g==='rtype'){
@@ -622,13 +683,14 @@ function startGame(){
   if(settings.bot)players.push({id:'bot',name:'Bot',color:'#aab3c0',isBot:true,level:settings.botLevel});
   let ord=players.map((_,i)=>i);
   if(settings.order==='random'){for(let i=ord.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[ord[i],ord[j]]=[ord[j],ord[i]];}}
-  G={type:settings.gameType,start:settings.start,out:settings.out,cricketMode:settings.cmode,
-     maxTurns:settings.turns==='limite'?settings.maxTurns:null,
+  G={type:settings.gameType,start:settings.start,out:settings.out,cricketMode:settings.cmode,sdiff:settings.sdiff,
+     maxTurns:settings.gameType==='siege'?null:(settings.turns==='limite'?settings.maxTurns:null),
      players, order:ord, n:ord.length,
      committed:[], current:[], mod:1, finished:false, winnerPos:null, endReason:null};
-  go(G.type==='cricket'?'cricket':'game');render();maybeBotTurn();
+  if(G.type==='siege'){G.castles=G.order.map(()=>genCastle(settings.sdiff));}
+  go(G.type==='cricket'?'cricket':(G.type==='siege'?'siege':'game'));render();maybeBotTurn();
 }
-function render(){if(G&&G.type==='cricket')renderCricket();else renderGame();if(remoteActive&&G&&G.media&&G.media!=='none')updateMediaView();remotePush();}
+function render(){if(G&&G.type==='cricket')renderCricket();else if(G&&G.type==='siege')renderSiege();else renderGame();if(remoteActive&&G&&G.media&&G.media!=='none')updateMediaView();remotePush();}
 /* ============ CRICKET ENGINE (Étape 3) ============ */
 const CRICKET_TARGETS=[20,19,18,17,16,15,25];
 function cricketCompute(includeCurrent){
@@ -661,6 +723,59 @@ function evalCricket(){
   if(win){commitTurn(false);G.finished=true;G.winnerPos=pos;G.endReason='cricket';finishGame();return true;}
   return false;
 }
+/* ============ SIÈGE ENGINE (mode bataille) ============ */
+const SIEGE_PARTS=[
+  {key:'porte',label:'Porte',emoji:'🚪',hp:1},
+  {key:'pont',label:'Pont-levis',emoji:'🌉',hp:1},
+  {key:'tourG',label:'Tour gauche',emoji:'🗼',hp:2},
+  {key:'tourD',label:'Tour droite',emoji:'🗼',hp:2},
+  {key:'rempart',label:'Remparts',emoji:'🧱',hp:3},
+  {key:'donjon',label:'Donjon',emoji:'🏯',hp:4},
+  {key:'roi',label:'Le Roi',emoji:'👑',hp:1,bull:true,protected:true}
+];
+function siegeMinMult(key,diff){
+  if(diff==='facile')return 1;
+  if(diff==='moyen')return key==='donjon'?2:1;
+  if(diff==='difficile'){if(key==='donjon')return 3;if(['tourG','tourD','rempart'].indexOf(key)>=0)return 2;return 1;}
+  if(diff==='expert'){if(key==='donjon')return 3;if(key==='roi')return 2;return 2;}
+  return 1;
+}
+function genCastle(diff){
+  const nums=[];for(let i=1;i<=20;i++)nums.push(i);
+  for(let i=nums.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[nums[i],nums[j]]=[nums[j],nums[i]];}
+  let ni=0;
+  return SIEGE_PARTS.map(p=>({key:p.key,label:p.label,emoji:p.emoji,maxhp:p.hp,bull:!!p.bull,protected:!!p.protected,
+    number:p.bull?25:nums[ni++],minMult:siegeMinMult(p.key,diff)}));
+}
+function siegeCompute(includeCurrent){
+  const n=G.n;
+  const hp={};G.order.forEach((_,k)=>{hp[k]=G.castles[k].map(p=>p.maxhp);});
+  let winner=null;
+  const seq=[];
+  G.committed.forEach((turn,i)=>{const pos=i%n;turn.darts.forEach(d=>seq.push([pos,d]));});
+  if(includeCurrent){const pos=G.committed.length%n;G.current.forEach(d=>seq.push([pos,d]));}
+  for(const [pos,d] of seq){
+    if(winner!==null)break;
+    const tgt=(pos+1)%n;const castle=G.castles[tgt];const chp=hp[tgt];
+    const allOthersDown=castle.every((p,idx)=>p.protected?true:chp[idx]<=0);
+    for(let idx=0;idx<castle.length;idx++){
+      const p=castle[idx];if(chp[idx]<=0)continue;
+      const match=p.bull?(d.num===25):(d.num===p.number);
+      if(!match)continue;
+      if(p.protected&&!allOthersDown)break; // king locked
+      if(d.mult<p.minMult)break;            // bounces off
+      chp[idx]=Math.max(0,chp[idx]-d.mult);
+      if(p.protected&&chp[idx]<=0)winner=pos;
+      break;
+    }
+  }
+  return {hp,winner};
+}
+function evalSiege(){
+  const st=siegeCompute(true);
+  if(st.winner!==null){commitTurn(false);G.finished=true;G.winnerPos=st.winner;G.endReason='siege';finishGame();return true;}
+  return false;
+}
 // remaining for a player order-position
 function remainingFor(pos){let r=G.start;G.committed.forEach((t,idx)=>{if(idx%G.n===pos)r-=t.scored;});return r;}
 function currentPos(){return G.committed.length%G.n;}
@@ -681,6 +796,7 @@ function pressNum(num){
   G.current.push(d);
   G.mod=1;
   if(G.type==='cricket'){ if(!evalCricket())render(); return; }
+  if(G.type==='siege'){ if(!evalSiege())render(); return; }
   // evaluate (X01)
   const pos=currentPos();
   const tentative=remainingFor(pos)-turnSum(G.current);
@@ -839,6 +955,51 @@ function renderCricket(){
   if(remoteActive&&!G.finished){document.getElementById('cwho').textContent=remLocked?('🌐 À '+p.name+' de jouer — en attente…'):'🌐 À toi de jouer';document.getElementById('cwho').style.color=p.color;}
 }
 function setMod(m){if((botBusy&&!_fromBot)||remoteLocked()||G.finished)return;G.mod=(G.mod===m)?1:m;render();}
+/* ============ SIÈGE RENDER ============ */
+function castleHTML(k,hpArr,isEnemy){
+  const castle=G.castles[k];
+  const allOthersDown=castle.every((p,idx)=>p.protected?true:hpArr[idx]<=0);
+  return '<div class="castlegrid">'+castle.map((p,idx)=>{
+    const hp=hpArr[idx],dead=hp<=0,locked=p.protected&&!allOthersDown;
+    let tgt=p.bull?'Bull (centre)':('n° '+p.number);
+    if(isEnemy&&locked)tgt='protégé — détruis le reste';
+    const mb=p.minMult===2?'<span class="mbadge">Double</span>':p.minMult===3?'<span class="mbadge">Triple</span>':'';
+    let bar='';for(let h=0;h<p.maxhp;h++)bar+=`<i class="${h<hp?'on':''}"></i>`;
+    const tl=dead?'détruit 💥':(isEnemy?('vise '+tgt):tgt);
+    return `<div class="part${dead?' dead':''}${locked?' locked':''}${p.protected?' king':''}">
+      <div class="pemoji">${dead?'💥':p.emoji}</div>
+      <div class="pinfo"><div class="plabel">${p.label}${dead?'':mb}</div><div class="ptarget">${tl}</div></div>
+      <div class="php">${dead?'':bar}</div></div>`;
+  }).join('')+'</div>';
+}
+function renderSiege(){
+  const st=siegeCompute(true);const pos=currentPos();const p=curPlayer();const tgt=(pos+1)%G.n;
+  const tb=document.getElementById('sturnbar');tb.innerHTML='';
+  G.order.forEach((pi,k)=>{const left=G.castles[k].filter((pp,idx)=>st.hp[k][idx]>0).length;
+    const div=document.createElement('div');div.className='tb'+(k===pos?' act':'');
+    div.innerHTML=`<div class="nm" style="color:${k===pos?G.players[pi].color:''}">${escapeHtml(G.players[pi].name)}</div><div class="sc">🏰 ${left}/${G.castles[k].length}</div>`;tb.appendChild(div);});
+  document.getElementById('swho').innerHTML='⚔️ À '+escapeHtml(p.name)+' — attaque le château de <b>'+escapeHtml(G.players[G.order[tgt]].name)+'</b>';
+  document.getElementById('swho').style.color=p.color;
+  document.getElementById('enemyCastle').innerHTML=castleHTML(tgt,st.hp[tgt],true);
+  document.getElementById('myCastle').innerHTML='<div class="mc-label">🛡️ Ton château</div>'+castleHTML(pos,st.hp[pos],false);
+  // slots
+  const ds=document.getElementById('sdartslots');ds.innerHTML='';
+  for(let i=0;i<3;i++){const d=G.current[i];const cur=(i===G.current.length);
+    const div=document.createElement('div');div.className='slot'+(d?' done':'')+(cur&&!d?' cur':'');
+    div.innerHTML=`<span class="lab">Flèche ${i+1}</span><span class="val">${d?dartLabel(d):(cur?'…':'–')}</span>`;ds.appendChild(div);}
+  document.getElementById('smodD').classList.toggle('on',G.mod===2);
+  document.getElementById('smodT').classList.toggle('on',G.mod===3);
+  const ng=document.getElementById('snumgrid');ng.innerHTML='';
+  for(let nmb=1;nmb<=20;nmb++){const b=document.createElement('div');b.className='num';b.textContent=nmb;b.onclick=()=>pressNum(nmb);ng.appendChild(b);}
+  const bull=document.createElement('div');bull.className='num bull'+(G.mod===3?' dis':'');bull.style.gridColumn='span 3';bull.textContent='25 · Bull';bull.onclick=()=>pressNum(25);ng.appendChild(bull);
+  const miss=document.createElement('div');miss.className='num miss';miss.style.gridColumn='span 2';miss.textContent='Raté ✗';miss.onclick=()=>pressNum(0);ng.appendChild(miss);
+  document.getElementById('sundoBtn').disabled=(G.current.length===0&&G.committed.length===0);
+  document.getElementById('sendTurnBtn').textContent=G.current.length>=3?'✓ Tour terminé':(G.current.length?'✓ Terminer la volée':'Passer mon tour');
+  // bot indicator
+  const botTurn=curIsBot()&&!G.finished;
+  document.getElementById('siege').classList.toggle('botturn',botTurn);
+  if(botTurn){document.getElementById('swho').innerHTML='🤖 '+escapeHtml(p.name)+' attaque… réfléchit';}
+}
 
 /* ============ WIN ============ */
 function renderWin(){
@@ -853,6 +1014,13 @@ function renderWin(){
     arr.sort((a,b)=>G.cricketMode==='cutthroat'?a.score-b.score:b.score-a.score);
     arr.forEach((r,i)=>{const div=document.createElement('div');div.className='statline';
       div.innerHTML=`<span>${medals[i]||'  '} ${escapeHtml(r.name)}</span><b>${r.score} pts</b>`;wrap.appendChild(div);});
+  } else if(G.type==='siege'){
+    document.getElementById('winName').textContent=winner.name+' a pris le château ! 👑';
+    sub='Siège · '+({facile:'Facile',moyen:'Moyen',difficile:'Difficile',expert:'Expert'}[G.sdiff]||'');
+    const st=siegeCompute(false);
+    G.order.forEach((pi,k)=>{const left=G.castles[k].filter((pp,idx)=>st.hp[k][idx]>0).length;
+      const div=document.createElement('div');div.className='statline';
+      div.innerHTML=`<span>${k===G.winnerPos?'👑':'🏳️'} ${escapeHtml(G.players[pi].name)}</span><b>${k===G.winnerPos?'vainqueur':'château en ruines'}</b>`;wrap.appendChild(div);});
   } else {
     if(G.endReason==='checkout')sub=G.start+' → 0';
     else if(G.endReason==='turns')sub='Limite de '+G.maxTurns+' tours atteinte — plus petit score restant';
@@ -918,6 +1086,15 @@ function botCricketTarget(pos,marks,scores,diff){
   for(const t of CRICKET_TARGETS){let opp=false;for(let q=0;q<G.n;q++){if(q!==pos&&marks[q][t]<3){opp=true;break;}}if(opp)return {num:t,mult:t===25?2:3};}
   return {num:20,mult:1};
 }
+function botSiegeTarget(pos){
+  const st=siegeCompute(true);const tgt=(pos+1)%G.n;const castle=G.castles[tgt];const chp=st.hp[tgt];
+  const allOthersDown=castle.every((p,idx)=>p.protected?true:chp[idx]<=0);
+  // attack first non-destroyed, non-locked part
+  for(let idx=0;idx<castle.length;idx++){const p=castle[idx];if(chp[idx]<=0)continue;if(p.protected&&!allOthersDown)continue;
+    const num=p.bull?25:p.number;const mult=Math.min(3,Math.max(p.minMult,p.bull?(p.minMult):2));
+    return {num,mult:(num===25&&mult===3)?2:mult};}
+  return {num:20,mult:1};
+}
 function delay(ms){return new Promise(r=>setTimeout(r,ms));}
 function maybeBotTurn(){if(botBusy||!G||G.finished)return;if(curIsBot())botPlayTurn();}
 async function botPlayTurn(){
@@ -929,6 +1106,7 @@ async function botPlayTurn(){
     const pos=currentPos();
     let target;
     if(G.type==='cricket'){const st=cricketCompute(true);target=botCricketTarget(pos,st.marks,st.scores,lvl);}
+    else if(G.type==='siege'){target=botSiegeTarget(pos);}
     else{const live=remainingFor(pos)-turnSum(G.current);target=botPickTarget(live,G.out,lvl);}
     const actual=botSimulate(target,lvl);
     _fromBot=true;pressNum(actual.num,actual.mult);_fromBot=false;
@@ -1031,7 +1209,7 @@ function onRemoteState(s){
     if(!wasFinished){try{localStorage.setItem('cb_last',G.players[G.order[G.winnerPos]].name+' a gagné 🏆');recordGame();}catch(e){}}
     renderWin();go('win');
   } else {
-    const scr=G.type==='cricket'?'cricket':'game';
+    const scr=G.type==='cricket'?'cricket':(G.type==='siege'?'siege':'game');
     if(!document.getElementById(scr).classList.contains('on'))go(scr);
     render();
     if(G.media&&G.media!=='none')startMedia();
