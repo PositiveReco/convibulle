@@ -82,6 +82,15 @@
   .tb-turns{flex:0 0 auto;margin-left:auto;display:flex;flex-direction:column;justify-content:center;text-align:center;padding:6px 11px;border-radius:9px;background:var(--card);border:1px dashed var(--champ-deep);}
   .tb-turns .tt-lab{font-size:9px;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);}
   .tb-turns .tt-val{font-size:16px;font-weight:800;color:var(--champ);line-height:1.05;}
+  /* Bas de page "soutien" (repris de PositiveReco) */
+  .cb-footer{text-align:center;margin-top:24px;padding-bottom:6px;}
+  .cb-foot-tag{font-size:12px;color:var(--muted);margin:0 0 10px;}
+  .cb-foot-btns{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;}
+  .cb-foot-beer{background:var(--champ);color:#1a1407;font-weight:800;font-size:12px;border-radius:9px;padding:8px 13px;text-decoration:none;border:1px solid var(--champ-deep);}
+  .cb-foot-beer:hover{background:var(--champ-bright);}
+  .cb-foot-mail{background:var(--card);color:var(--champ);font-weight:700;font-size:12px;border-radius:9px;padding:8px 13px;text-decoration:none;border:1px solid var(--line);}
+  .cb-foot-mail:hover{border-color:var(--champ-deep);}
+  .cb-foot-ver{font-size:11px;color:var(--muted);opacity:.6;margin:15px 0 0;}
   .bigscore{text-align:center;}
   .bigscore .who{font-size:13px;color:var(--champ);font-weight:700;}
   .bigscore .n{font-size:clamp(48px,16vw,84px);font-weight:800;line-height:1;letter-spacing:-2px;}
@@ -251,7 +260,14 @@
     <div class="spacer"></div>
     <button id="installBtn" class="btn install" style="display:none;" onclick="installApp()">⤓ Installer l'app sur l'écran d'accueil</button>
     <div id="lastGame" class="muted" style="text-align:center;margin-top:10px;"></div>
-    <div class="muted" style="text-align:center;font-size:10px;opacity:.5;margin-top:6px;">v1.7.3</div>
+    <footer class="cb-footer">
+      <p class="cb-foot-tag">Cette appli est gratuite et faite avec 💙</p>
+      <div class="cb-foot-btns">
+        <a class="cb-foot-beer" href="https://buymeacoffee.com/jeremycesar" target="_blank" rel="noopener noreferrer">🍺 Offrir une bière</a>
+        <a class="cb-foot-mail" href="mailto:positivereco.app@gmail.com?subject=Un%20petit%20mot%20pour%20ConviBulle%20%F0%9F%8E%AF">💌 Écrire un mot</a>
+      </div>
+      <p class="cb-foot-ver">ConviBulle v1.7.3 · créé par Jeremy 💙</p>
+    </footer>
   </section>
 
   <!-- SETTINGS -->
