@@ -131,6 +131,10 @@
     #cricket .turnbar{grid-column:1/3;}
     #c-left{border-right:1px solid var(--line);padding-right:16px;margin-bottom:0;overflow:auto;}
     #c-right{margin-top:0;display:flex;flex-direction:column;justify-content:flex-start;}
+    #siege .gamewrap{display:grid;grid-template-columns:1fr 1.05fr;grid-template-rows:auto 1fr;gap:0 18px;}
+    #siege .turnbar{grid-column:1/3;}
+    #s-left{border-right:1px solid var(--line);padding-right:16px;overflow:auto;min-height:0;}
+    #s-right{justify-content:flex-start;}
   }
   /* remote */
   .codebox{font-size:34px;font-weight:800;letter-spacing:4px;color:transparent;background:linear-gradient(180deg,var(--champ-bright),var(--champ-deep));-webkit-background-clip:text;background-clip:text;text-align:center;}
@@ -169,16 +173,20 @@
   .plabel{font-weight:700;font-size:14px;display:flex;align-items:center;}
   .ptarget{font-size:12px;color:var(--champ-bright);}
   .mbadge{font-size:10px;color:var(--ink);background:var(--champ);border-radius:5px;padding:1px 5px;margin-left:6px;font-weight:800;}
-  .php{display:flex;gap:3px;}
+  .php{display:flex;gap:3px;flex:none;}
   .php i{width:12px;height:12px;border-radius:3px;background:var(--card2);border:1px solid var(--line);}
   .php i.on{background:linear-gradient(180deg,var(--champ-bright),var(--champ-deep));border-color:var(--champ-deep);}
-  .mycastle{margin-top:10px;border-top:1px solid var(--line);padding-top:8px;}
-  .mc-label{font-size:12px;color:var(--muted);margin-bottom:5px;}
-  .mycastle .part{padding:5px 9px;gap:8px;}
-  .mycastle .pemoji{font-size:16px;width:20px;}
-  .mycastle .plabel{font-size:12px;}
-  .mycastle .ptarget{font-size:10px;}
-  .mycastle .php i{width:9px;height:9px;}
+  .pnum{flex:none;min-width:48px;text-align:center;font-size:22px;font-weight:800;color:var(--champ-bright);display:flex;flex-direction:column;align-items:center;line-height:1;}
+  .pnum small{font-size:9px;color:var(--muted);font-weight:700;margin-top:2px;text-transform:uppercase;}
+  .pnum.bull{font-size:19px;}
+  .pnum.lock,.pnum.dead{font-size:18px;}
+  .castlepanel{border:1px solid var(--line);border-radius:14px;padding:8px;margin-bottom:10px;}
+  .castlepanel.target{border-color:var(--champ);background:rgba(230,204,126,.06);}
+  .cp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;padding:0 2px;}
+  .cp-name{font-weight:800;font-size:13px;}
+  .cp-badge{font-size:11px;color:var(--ink);background:var(--champ);border-radius:6px;padding:2px 8px;font-weight:800;}
+  .cp-sub{font-size:11px;color:var(--muted);}
+  #s-right{display:flex;flex-direction:column;}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -202,7 +210,7 @@
     <div class="spacer"></div>
     <button id="installBtn" class="btn install" style="display:none;" onclick="installApp()">⤓ Installer l'app sur l'écran d'accueil</button>
     <div id="lastGame" class="muted" style="text-align:center;margin-top:10px;"></div>
-    <div class="muted" style="text-align:center;font-size:10px;opacity:.5;margin-top:6px;">v1.6</div>
+    <div class="muted" style="text-align:center;font-size:10px;opacity:.5;margin-top:6px;">v1.6.1</div>
   </section>
 
   <!-- SETTINGS -->
@@ -336,19 +344,21 @@
   <section id="siege" class="screen">
     <div class="gamewrap">
       <div class="turnbar" id="sturnbar"></div>
-      <div class="who" id="swho" style="font-size:13px;font-weight:700;margin-bottom:8px;"></div>
-      <div id="enemyCastle" class="castle"></div>
-      <div id="myCastle" class="mycastle"></div>
-      <div style="flex:1"></div>
-      <div class="dartslots" id="sdartslots"></div>
-      <div class="mods">
-        <div class="mod" id="smodD" onclick="setMod(2)">Double</div>
-        <div class="mod" id="smodT" onclick="setMod(3)">Triple</div>
+      <div id="s-left">
+        <div class="who" id="swho" style="font-size:13px;font-weight:700;margin-bottom:8px;"></div>
+        <div id="siegeCastles"></div>
       </div>
-      <div class="numgrid" id="snumgrid"></div>
-      <div class="act-row">
-        <button class="undo" id="sundoBtn" onclick="undo()">↩︎ Annuler</button>
-        <button class="btn" id="sendTurnBtn" onclick="endTurn()">✓ Tour terminé</button>
+      <div id="s-right">
+        <div class="dartslots" id="sdartslots"></div>
+        <div class="mods">
+          <div class="mod" id="smodD" onclick="setMod(2)">Double</div>
+          <div class="mod" id="smodT" onclick="setMod(3)">Triple</div>
+        </div>
+        <div class="numgrid" id="snumgrid"></div>
+        <div class="act-row">
+          <button class="undo" id="sundoBtn" onclick="undo()">↩︎ Annuler</button>
+          <button class="btn" id="sendTurnBtn" onclick="endTurn()">✓ Tour terminé</button>
+        </div>
       </div>
     </div>
   </section>
@@ -956,19 +966,22 @@ function renderCricket(){
 }
 function setMod(m){if((botBusy&&!_fromBot)||remoteLocked()||G.finished)return;G.mod=(G.mod===m)?1:m;render();}
 /* ============ SIÈGE RENDER ============ */
-function castleHTML(k,hpArr,isEnemy){
+function castleHTML(k,hpArr,isTarget){
   const castle=G.castles[k];
   const allOthersDown=castle.every((p,idx)=>p.protected?true:hpArr[idx]<=0);
   return '<div class="castlegrid">'+castle.map((p,idx)=>{
     const hp=hpArr[idx],dead=hp<=0,locked=p.protected&&!allOthersDown;
-    let tgt=p.bull?'Bull (centre)':('n° '+p.number);
-    if(isEnemy&&locked)tgt='protégé — détruis le reste';
-    const mb=p.minMult===2?'<span class="mbadge">Double</span>':p.minMult===3?'<span class="mbadge">Triple</span>':'';
     let bar='';for(let h=0;h<p.maxhp;h++)bar+=`<i class="${h<hp?'on':''}"></i>`;
-    const tl=dead?'détruit 💥':(isEnemy?('vise '+tgt):tgt);
+    let numCol;
+    if(dead)numCol='<div class="pnum dead">💥</div>';
+    else if(locked)numCol='<div class="pnum lock">🔒<small>protégé</small></div>';
+    else if(p.bull)numCol=`<div class="pnum bull">◎<small>${p.minMult===2?'D.Bull':'Bull'}</small></div>`;
+    else numCol=`<div class="pnum">${p.number}${p.minMult>1?`<small>${p.minMult===2?'double':'triple'}</small>`:''}</div>`;
+    const sub=dead?'détruit':(isTarget?(locked?'à protéger d\'abord le reste':'à viser'):'défense');
     return `<div class="part${dead?' dead':''}${locked?' locked':''}${p.protected?' king':''}">
       <div class="pemoji">${dead?'💥':p.emoji}</div>
-      <div class="pinfo"><div class="plabel">${p.label}${dead?'':mb}</div><div class="ptarget">${tl}</div></div>
+      <div class="pinfo"><div class="plabel">${p.label}</div><div class="ptarget">${sub}</div></div>
+      ${numCol}
       <div class="php">${dead?'':bar}</div></div>`;
   }).join('')+'</div>';
 }
@@ -980,8 +993,11 @@ function renderSiege(){
     div.innerHTML=`<div class="nm" style="color:${k===pos?G.players[pi].color:''}">${escapeHtml(G.players[pi].name)}</div><div class="sc">🏰 ${left}/${G.castles[k].length}</div>`;tb.appendChild(div);});
   document.getElementById('swho').innerHTML='⚔️ À '+escapeHtml(p.name)+' — attaque le château de <b>'+escapeHtml(G.players[G.order[tgt]].name)+'</b>';
   document.getElementById('swho').style.color=p.color;
-  document.getElementById('enemyCastle').innerHTML=castleHTML(tgt,st.hp[tgt],true);
-  document.getElementById('myCastle').innerHTML='<div class="mc-label">🛡️ Ton château</div>'+castleHTML(pos,st.hp[pos],false);
+  // fixed castles: player order 0 on top, 1 below — only the highlight (target) changes
+  const cont=document.getElementById('siegeCastles');cont.innerHTML='';
+  G.order.forEach((pi,k)=>{const panel=document.createElement('div');panel.className='castlepanel'+(k===tgt?' target':'');
+    panel.innerHTML=`<div class="cp-head"><span class="cp-name" style="color:${G.players[pi].color}">${k===tgt?'🎯':'🛡️'} Château de ${escapeHtml(G.players[pi].name)}</span>${k===tgt?'<span class="cp-badge">sous le feu</span>':'<span class="cp-sub">à l\'abri</span>'}</div>`+castleHTML(k,st.hp[k],k===tgt);
+    cont.appendChild(panel);});
   // slots
   const ds=document.getElementById('sdartslots');ds.innerHTML='';
   for(let i=0;i<3;i++){const d=G.current[i];const cur=(i===G.current.length);
