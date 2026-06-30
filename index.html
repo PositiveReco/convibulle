@@ -125,7 +125,8 @@
   .botturn .slot.done .val{animation:pop .25s ease-out;}
 
   /* WIN */
-  #win{align-items:center;justify-content:center;text-align:center;}
+  #win{align-items:center;text-align:center;}
+  #win .spacer{min-height:14px;}
   .trophy{font-size:62px;}
   .statline{display:flex;justify-content:space-between;width:100%;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:15px;}
   .statline b{font-size:17px;}
@@ -312,7 +313,7 @@
         <a class="cb-foot-beer" href="https://buymeacoffee.com/jeremycesar" target="_blank" rel="noopener noreferrer">🥂 Offrir une petite coupe</a>
         <a class="cb-foot-mail" href="mailto:positivereco.app@gmail.com?subject=Un%20petit%20mot%20pour%20ConviBulle%20%F0%9F%8E%AF">💌 Écrire un mot</a>
       </div>
-      <p class="cb-foot-ver">ConviBulle v1.9.0 · créé par Jeremy <span class="cb-heart">♥</span></p>
+      <p class="cb-foot-ver">ConviBulle v1.9.1 · créé par Jeremy <span class="cb-heart">♥</span></p>
     </footer>
   </section>
 
@@ -391,8 +392,8 @@
       <div class="chip on" data-val="random">🎲 Aléatoire</div>
       <div class="chip" data-val="manual">✋ Manuel</div>
     </div>
-    <div class="spacer"></div>
-    <button class="btn" onclick="go('players')">Choisir les joueurs →</button>
+    <div class="spacer" style="min-height:18px;"></div>
+    <button class="btn" style="margin-top:4px;" onclick="go('players')">Choisir les joueurs →</button>
   </section>
 
   <!-- PLAYERS -->

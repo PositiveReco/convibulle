@@ -1,5 +1,5 @@
 /* ConviBulle — service worker (Étape 1) : cache pour fonctionner hors-ligne */
-const CACHE = 'convibulle-v21';
+const CACHE = 'convibulle-v22';
 const ASSETS = [
   './',
   './index.html',
