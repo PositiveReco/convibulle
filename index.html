@@ -312,7 +312,7 @@
         <a class="cb-foot-beer" href="https://buymeacoffee.com/jeremycesar" target="_blank" rel="noopener noreferrer">🥂 Offrir une petite coupe</a>
         <a class="cb-foot-mail" href="mailto:positivereco.app@gmail.com?subject=Un%20petit%20mot%20pour%20ConviBulle%20%F0%9F%8E%AF">💌 Écrire un mot</a>
       </div>
-      <p class="cb-foot-ver">ConviBulle v1.8.1 · créé par Jeremy <span class="cb-heart">♥</span></p>
+      <p class="cb-foot-ver">ConviBulle v1.8.2 · créé par Jeremy <span class="cb-heart">♥</span></p>
     </footer>
   </section>
 
@@ -1333,17 +1333,18 @@ function renderSiege(){
 }
 
 /* ============ BATAILLE NAVALE RENDER ============ */
-function batailleCell(num,state){
+function batailleCell(num,state,sunkEmoji){
   if(state==='water')return `<div class="bcell"><span class="big">${num}</span></div>`;
-  const ic=state==='miss'?'💦':state==='hit'?'💥':state==='sunk'?'🚢':'⚓';
+  const ic=state==='miss'?'💦':state==='hit'?'💥':state==='sunk'?(sunkEmoji||'🚢'):'⚓';
   return `<div class="bcell ${state}"><span class="bnum">${num}</span><span class="bic">${ic}</span></div>`;
 }
 function seaGridHTML(k,comp){
+  const cellShip={};G.fleets[k].forEach(ship=>ship.cells.forEach(c=>{cellShip[c]=ship.emoji;}));
   let cells='';
   for(let num=1;num<=20;num++){
     let st=comp.sea[k][num]||'water';
     if(st==='water'&&comp.reveal[k].has(num))st='reveal';
-    cells+=batailleCell(num,st);
+    cells+=batailleCell(num,st,cellShip[num]);
   }
   return `<div class="bsea">${cells}</div>`;
 }
