@@ -312,7 +312,7 @@
         <a class="cb-foot-beer" href="https://buymeacoffee.com/jeremycesar" target="_blank" rel="noopener noreferrer">🥂 Offrir une petite coupe</a>
         <a class="cb-foot-mail" href="mailto:positivereco.app@gmail.com?subject=Un%20petit%20mot%20pour%20ConviBulle%20%F0%9F%8E%AF">💌 Écrire un mot</a>
       </div>
-      <p class="cb-foot-ver">ConviBulle v1.8.0 · créé par Jeremy <span class="cb-heart">♥</span></p>
+      <p class="cb-foot-ver">ConviBulle v1.8.1 · créé par Jeremy <span class="cb-heart">♥</span></p>
     </footer>
   </section>
 
@@ -361,15 +361,17 @@
       </div>
       <div class="muted" style="font-size:11px;margin-top:5px;">Classique : le plus de points gagne. Coupe-gorge : les points vont aux adversaires, le plus petit score gagne.</div>
     </div>
-    <div class="field-label">Nombre de tours</div>
-    <div class="row" data-group="turns">
-      <div class="chip on" data-val="illimite">Illimité</div>
-      <div class="chip" data-val="limite">Limité</div>
-    </div>
-    <div id="turnsStepper" class="stepper" style="display:none;margin-top:8px;">
-      <button class="b" onclick="bumpTurns(-1)">−</button>
-      <div style="text-align:center;"><div class="v" id="turnsVal">20</div><div class="u">tours max</div></div>
-      <button class="b" onclick="bumpTurns(1)">+</button>
+    <div id="turnsRow">
+      <div class="field-label">Nombre de tours</div>
+      <div class="row" data-group="turns">
+        <div class="chip on" data-val="illimite">Illimité</div>
+        <div class="chip" data-val="limite">Limité</div>
+      </div>
+      <div id="turnsStepper" class="stepper" style="display:none;margin-top:8px;">
+        <button class="b" onclick="bumpTurns(-1)">−</button>
+        <div style="text-align:center;"><div class="v" id="turnsVal">20</div><div class="u">tours max</div></div>
+        <button class="b" onclick="bumpTurns(1)">+</button>
+      </div>
     </div>
     <div class="field-label">Adversaire</div>
     <div class="row" data-group="opp">
@@ -763,6 +765,14 @@ document.querySelectorAll('[data-group]').forEach(grp=>{
         document.getElementById('variantRow').style.display=(gt==='cricket')?'block':'none';
         document.getElementById('siegeRow').style.display=(gt==='siege')?'block':'none';
         document.getElementById('batailleRow').style.display=(gt==='bataille')?'block':'none';
+        // Siège et Bataille n'utilisent pas la limite de tours : on cache la ligne
+        const usesTurns=(gt!=='siege'&&gt!=='bataille');
+        document.getElementById('turnsRow').style.display=usesTurns?'block':'none';
+        if(!usesTurns){
+          settings.turns='illimite';
+          document.getElementById('turnsStepper').style.display='none';
+          document.querySelectorAll('[data-group="turns"] .chip').forEach(c=>c.classList.toggle('on',c.dataset.val==='illimite'));
+        }
       }
       if(g==='sdiff')settings.sdiff=v;
       if(g==='bdiff')settings.bdiff=v;
