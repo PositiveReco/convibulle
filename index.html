@@ -312,7 +312,7 @@
         <a class="cb-foot-beer" href="https://buymeacoffee.com/jeremycesar" target="_blank" rel="noopener noreferrer">🥂 Offrir une petite coupe</a>
         <a class="cb-foot-mail" href="mailto:positivereco.app@gmail.com?subject=Un%20petit%20mot%20pour%20ConviBulle%20%F0%9F%8E%AF">💌 Écrire un mot</a>
       </div>
-      <p class="cb-foot-ver">ConviBulle v1.8.2 · créé par Jeremy <span class="cb-heart">♥</span></p>
+      <p class="cb-foot-ver">ConviBulle v1.9.0 · créé par Jeremy <span class="cb-heart">♥</span></p>
     </footer>
   </section>
 
@@ -578,6 +578,8 @@
         <div class="chip on" data-val="501">501</div>
         <div class="chip" data-val="301">301</div>
         <div class="chip" data-val="cricket">Cricket</div>
+        <div class="chip" data-val="siege">🏰 Siège</div>
+        <div class="chip" data-val="bataille">🚢 Bataille</div>
       </div>
       <div id="rOutRow">
         <div class="field-label">Sortie</div>
@@ -587,12 +589,22 @@
         <div class="field-label">Variante Cricket</div>
         <div class="row" data-group="rcmode"><div class="chip on" data-val="standard">Classique</div><div class="chip" data-val="cutthroat">Coupe-gorge</div></div>
       </div>
-      <div class="field-label">Nombre de tours</div>
-      <div class="row" data-group="rturns"><div class="chip on" data-val="illimite">Illimité</div><div class="chip" data-val="limite">Limité</div></div>
-      <div id="rTurnsStepper" class="stepper" style="display:none;margin-top:8px;">
-        <button class="b" onclick="bumpTurns(-1)">−</button>
-        <div style="text-align:center;"><div class="v" id="rTurnsVal">20</div><div class="u">tours max</div></div>
-        <button class="b" onclick="bumpTurns(1)">+</button>
+      <div id="rsdiffRow" style="display:none;">
+        <div class="field-label">Difficulté du siège</div>
+        <div class="row" data-group="rsdiff"><div class="chip on" data-val="facile">Facile</div><div class="chip" data-val="moyen">Moyen</div><div class="chip" data-val="difficile">Difficile</div><div class="chip" data-val="expert">Expert</div></div>
+      </div>
+      <div id="rbdiffRow" style="display:none;">
+        <div class="field-label">Difficulté de la bataille</div>
+        <div class="row" data-group="rbdiff"><div class="chip on" data-val="facile">Facile</div><div class="chip" data-val="moyen">Moyen</div><div class="chip" data-val="difficile">Difficile</div></div>
+      </div>
+      <div id="rturnsRow">
+        <div class="field-label">Nombre de tours</div>
+        <div class="row" data-group="rturns"><div class="chip on" data-val="illimite">Illimité</div><div class="chip" data-val="limite">Limité</div></div>
+        <div id="rTurnsStepper" class="stepper" style="display:none;margin-top:8px;">
+          <button class="b" onclick="bumpTurns(-1)">−</button>
+          <div style="text-align:center;"><div class="v" id="rTurnsVal">20</div><div class="u">tours max</div></div>
+          <button class="b" onclick="bumpTurns(1)">+</button>
+        </div>
       </div>
       <div class="field-label">Ordre des joueurs</div>
       <div class="row" data-group="rorder"><div class="chip on" data-val="random">🎲 Aléatoire</div><div class="chip" data-val="manual">✋ Manuel</div></div>
@@ -779,10 +791,14 @@ document.querySelectorAll('[data-group]').forEach(grp=>{
       if(g==='out')settings.out=v;
       if(g==='cmode')settings.cmode=v;
       if(g==='rtype'){
-        if(v==='cricket')settings.gameType='cricket';else{settings.gameType='x01';settings.start=parseInt(v);}
-        document.getElementById('rOutRow').style.display=settings.gameType==='cricket'?'none':'block';
-        document.getElementById('rVariantRow').style.display=settings.gameType==='cricket'?'block':'none';
+        if(v==='cricket')settings.gameType='cricket';
+        else if(v==='siege')settings.gameType='siege';
+        else if(v==='bataille')settings.gameType='bataille';
+        else{settings.gameType='x01';settings.start=parseInt(v);}
+        syncLobbyConfigUI();
       }
+      if(g==='rsdiff')settings.sdiff=v;
+      if(g==='rbdiff')settings.bdiff=v;
       if(g==='rout')settings.out=v;
       if(g==='rcmode')settings.cmode=v;
       if(g==='turns'){settings.turns=v;document.getElementById('turnsStepper').style.display=v==='limite'?'flex':'none';}
@@ -1330,6 +1346,14 @@ function renderSiege(){
   const botTurn=curIsBot()&&!G.finished;
   document.getElementById('siege').classList.toggle('botturn',botTurn);
   if(botTurn){document.getElementById('swho').innerHTML='🤖 '+escapeHtml(p.name)+' attaque… réfléchit';}
+  const remLocked=remoteLocked();
+  document.getElementById('siege').classList.toggle('remlock',remLocked);
+  if(remoteActive&&!G.finished){
+    document.getElementById('swho').innerHTML=remLocked
+      ?('🌐 À '+escapeHtml(p.name)+' de jouer — en attente…')
+      :('🌐 À toi — attaque le château de <b>'+escapeHtml(G.players[G.order[tgt]].name)+'</b>');
+    document.getElementById('swho').style.color=p.color;
+  }
 }
 
 /* ============ BATAILLE NAVALE RENDER ============ */
@@ -1386,6 +1410,14 @@ function renderBataille(){
   const botTurn=curIsBot()&&!G.finished;
   document.getElementById('bataille').classList.toggle('botturn',botTurn);
   if(botTurn)document.getElementById('bwho').innerHTML='🤖 '+escapeHtml(p.name)+' vise… réfléchit';
+  const remLocked=remoteLocked();
+  document.getElementById('bataille').classList.toggle('remlock',remLocked);
+  if(remoteActive&&!G.finished){
+    document.getElementById('bwho').innerHTML=remLocked
+      ?('🌐 À '+escapeHtml(p.name)+' de jouer — en attente…')
+      :('🌐 À toi — bombarde la flotte de <b>'+escapeHtml(G.players[G.order[tgt]].name)+'</b>');
+    document.getElementById('bwho').style.color=p.color;
+  }
 }
 
 /* ============ WIN ============ */
@@ -1558,6 +1590,7 @@ function createRoom(){
   const name=(document.getElementById('rName').value||'').trim();if(!name){toast('Entre ton prénom');return;}
   myName=name;saveRName(name);isHost=true;
   const code='BULLE-'+Math.floor(1000+Math.random()*9000);
+  syncLobbyConfigUI();
   if(openRoom(code,true))go('lobby');
 }
 function joinRoom(){
@@ -1580,6 +1613,20 @@ function orderedPresence(){
   return pls;
 }
 function moveLobby(id,dir){const i=lobbyOrder.indexOf(id),j=i+dir;if(i<0||j<0||j>=lobbyOrder.length)return;[lobbyOrder[i],lobbyOrder[j]]=[lobbyOrder[j],lobbyOrder[i]];renderLobby();}
+function syncLobbyConfigUI(){
+  const gt=settings.gameType;
+  const val=gt==='x01'?String(settings.start):gt;
+  document.querySelectorAll('[data-group="rtype"] .chip').forEach(c=>c.classList.toggle('on',c.dataset.val===val));
+  document.getElementById('rOutRow').style.display=(gt==='x01')?'block':'none';
+  document.getElementById('rVariantRow').style.display=(gt==='cricket')?'block':'none';
+  document.getElementById('rsdiffRow').style.display=(gt==='siege')?'block':'none';
+  document.getElementById('rbdiffRow').style.display=(gt==='bataille')?'block':'none';
+  const usesTurns=(gt!=='siege'&&gt!=='bataille');
+  document.getElementById('rturnsRow').style.display=usesTurns?'block':'none';
+  if(!usesTurns)settings.turns='illimite';
+  document.querySelectorAll('[data-group="rturns"] .chip').forEach(c=>c.classList.toggle('on',c.dataset.val===settings.turns));
+  document.getElementById('rTurnsStepper').style.display=(usesTurns&&settings.turns==='limite')?'flex':'none';
+}
 function renderLobby(){
   document.getElementById('lobbyCode').textContent=roomCode||'—';
   document.getElementById('hostConfig').style.display=isHost?'block':'none';
@@ -1600,10 +1647,12 @@ function hostStart(){
   const players=pls.map((p,i)=>({id:p.id,name:p.name,color:COLORS[i%COLORS.length],isBot:false}));
   let ord=players.map((_,i)=>i);
   if(settings.order==='random'){for(let i=ord.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[ord[i],ord[j]]=[ord[j],ord[i]];}}
-  G={type:settings.gameType,start:settings.start,out:settings.out,cricketMode:settings.cmode,
-     maxTurns:settings.turns==='limite'?settings.maxTurns:null,media:settings.media,
+  G={type:settings.gameType,start:settings.start,out:settings.out,cricketMode:settings.cmode,sdiff:settings.sdiff,bdiff:settings.bdiff,
+     maxTurns:(settings.gameType==='siege'||settings.gameType==='bataille')?null:(settings.turns==='limite'?settings.maxTurns:null),media:settings.media,
      players,order:ord,n:ord.length,committed:[],current:[],mod:1,finished:false,winnerPos:null,endReason:null,remote:true};
-  go(G.type==='cricket'?'cricket':'game');render();
+  if(G.type==='siege'){G.castles=G.order.map(()=>genCastle(settings.sdiff));window._siegePrevHp=null;}
+  if(G.type==='bataille'){G.fleets=G.order.map(()=>genFleet());window._batPrevSunk=null;}
+  go(G.type==='cricket'?'cricket':(G.type==='siege'?'siege':(G.type==='bataille'?'bataille':'game')));render();
   startMedia();
 }
 function onRemoteState(s){
@@ -1615,7 +1664,7 @@ function onRemoteState(s){
     if(!wasFinished){try{localStorage.setItem('cb_last',G.players[G.order[G.winnerPos]].name+' a gagné 🏆');recordGame();}catch(e){}}
     renderWin();go('win');
   } else {
-    const scr=G.type==='cricket'?'cricket':(G.type==='siege'?'siege':'game');
+    const scr=G.type==='cricket'?'cricket':(G.type==='siege'?'siege':(G.type==='bataille'?'bataille':'game'));
     if(!document.getElementById(scr).classList.contains('on'))go(scr);
     render();
     if(G.media&&G.media!=='none')startMedia();
