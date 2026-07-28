@@ -230,6 +230,12 @@
   .cs-item{display:flex;align-items:center;gap:3px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:3px 7px;font-size:15px;}
   .cs-item b{font-size:11px;color:var(--champ-bright);}
   .cs-item.dead{opacity:.4;}
+  .cp-toggle{color:var(--champ-bright);font-weight:700;}
+  .castlepanel.opened{border-color:var(--champ-deep);}
+  .castlepanel.kingtime{border-color:var(--champ-bright);box-shadow:0 0 0 1px var(--champ-deep) inset,0 0 22px rgba(230,204,126,.28);}
+  .cp-badge.kingbadge{background:linear-gradient(180deg,var(--champ-bright),var(--champ-deep));color:var(--ink);animation:kingpulse 1.3s ease-in-out infinite;}
+  .king-call{margin-top:8px;text-align:center;font-weight:800;font-size:15px;color:var(--ink);background:linear-gradient(180deg,var(--champ-bright),var(--champ-deep));border-radius:11px;padding:10px;box-shadow:0 0 18px rgba(230,204,126,.45);animation:kingpulse 1.3s ease-in-out infinite;}
+  @keyframes kingpulse{0%,100%{transform:scale(1);opacity:.93;}50%{transform:scale(1.03);opacity:1;}}
   .castlewrap{text-align:center;}
   .castlewrap svg{width:100%;height:auto;display:block;border-radius:8px;}
   @keyframes shakecastle{0%,100%{transform:translateX(0)}15%{transform:translateX(-5px) rotate(-.4deg)}30%{transform:translateX(5px) rotate(.4deg)}45%{transform:translateX(-4px)}60%{transform:translateX(4px)}78%{transform:translateX(-2px)}}
@@ -315,7 +321,7 @@
         <a class="cb-foot-beer" href="https://buymeacoffee.com/jeremycesar" target="_blank" rel="noopener noreferrer">🥂 Offrir une petite coupe</a>
         <a class="cb-foot-mail" href="mailto:positivereco.app@gmail.com?subject=Un%20petit%20mot%20pour%20ConviBulle%20%F0%9F%8E%AF">💌 Écrire un mot</a>
       </div>
-      <p class="cb-foot-ver">ConviBulle v1.9.2 · créé par Jeremy <span class="cb-heart">♥</span></p>
+      <p class="cb-foot-ver">ConviBulle v1.9.3 · créé par Jeremy <span class="cb-heart">♥</span></p>
     </footer>
   </section>
 
@@ -868,7 +874,7 @@ function startGame(){
      maxTurns:(settings.gameType==='siege'||settings.gameType==='bataille')?null:(settings.turns==='limite'?settings.maxTurns:null),
      players, order:ord, n:ord.length,
      committed:[], current:[], mod:1, finished:false, winnerPos:null, endReason:null};
-  if(G.type==='siege'){G.castles=G.order.map(()=>genCastle(settings.sdiff));window._siegePrevHp=null;}
+  if(G.type==='siege'){G.castles=G.order.map(()=>genCastle(settings.sdiff));window._siegePrevHp=null;siegeShow=null;}
   if(G.type==='bataille'){G.fleets=G.order.map(()=>genFleet());window._batPrevSunk=null;}
   go(G.type==='cricket'?'cricket':(G.type==='siege'?'siege':(G.type==='bataille'?'bataille':'game')));render();maybeBotTurn();
 }
@@ -1263,6 +1269,7 @@ function castleHTML(k,hpArr,isTarget){
       <div class="php">${dead?'':bar}</div></div>`;
   }).join('')+'</div>';
 }
+let siegeShow=null; // index d'un château (non ciblé) affiché en grand à la demande
 function castleSummaryHTML(k,hpArr){
   const castle=G.castles[k];
   return '<div class="castlesum">'+castle.map((p,idx)=>{const hp=hpArr[idx],dead=hp<=0;
@@ -1297,6 +1304,7 @@ function drawCastle(P){const w=360,h=260;
   } else { s+=s_rubble(150,60,214)+s_badge(180,120,P.donjon); }
   // king — TOUJOURS visible : couronne perchée tant qu'il est protégé, sinon il descend dans le badge « 👑 BULL »
   if(P.roi.hp>0&&P.roi.locked)s+=`<line x1="180" y1="50" x2="180" y2="70" stroke="#c9c9c9" stroke-width="2"/><text x="180" y="50" text-anchor="middle" font-size="22">👑</text>`;
+  else if(P.roi.hp>0&&!P.roi.locked)s+=`<circle cx="180" cy="38" r="34" fill="#E6CC7E" opacity=".14"/><circle cx="180" cy="38" r="23" fill="#F6E7B0" opacity=".2"/>`;
   else if(P.roi.hp<=0)s+=`<text x="180" y="52" text-anchor="middle" font-size="20" opacity=".5">💨</text>`;
   s+=s_badge(180,38,P.roi);
   if(P.rempart.hp>0){
@@ -1323,16 +1331,28 @@ function renderSiege(){
     const div=document.createElement('div');div.className='tb'+(k===pos?' act':'');
     div.innerHTML=`<div class="nm" style="color:${k===pos?G.players[pi].color:''}">${escapeHtml(G.players[pi].name)}</div><div class="sc">🏰 ${left}/${G.castles[k].length}</div>`;tb.appendChild(div);});
   appendTurnCounter(tb);
-  document.getElementById('swho').innerHTML='⚔️ À '+escapeHtml(p.name)+' — attaque le château de <b>'+escapeHtml(G.players[G.order[tgt]].name)+'</b>';
+  const tgtKingOnly=(function(){const s=siegeState(tgt,st.hp[tgt]);return s.roi.hp>0&&!s.roi.locked;})();
+  document.getElementById('swho').innerHTML=tgtKingOnly
+    ? '👑 À '+escapeHtml(p.name)+' — capturez le Roi de <b>'+escapeHtml(G.players[G.order[tgt]].name)+'</b> au Bull !'
+    : '⚔️ À '+escapeHtml(p.name)+' — attaque le château de <b>'+escapeHtml(G.players[G.order[tgt]].name)+'</b>';
   document.getElementById('swho').style.color=p.color;
-  // fixed castles: player order 0 on top, 1 below. Target = drawn castle ; defense = compact strip.
+  // château ciblé = dessiné en grand ; les autres = résumé (cliquable pour agrandir).
   const totalHp=G.order.reduce((s,_,k)=>s+st.hp[k].reduce((a,b)=>a+Math.max(0,b),0),0);
   const shake=(window._siegePrevHp!=null&&totalHp<window._siegePrevHp);
   window._siegePrevHp=totalHp;
   const cont=document.getElementById('siegeCastles');cont.innerHTML='';
-  G.order.forEach((pi,k)=>{const isT=k===tgt;const panel=document.createElement('div');panel.className='castlepanel'+(isT?' target':'');
-    const body=isT?`<div class="castlewrap${shake?' castle-shake':''}">${drawCastle(siegeState(k,st.hp[k]))}</div>`:castleSummaryHTML(k,st.hp[k]);
-    panel.innerHTML=`<div class="cp-head"><span class="cp-name" style="color:${G.players[pi].color}">${isT?'🎯':'🛡️'} Château de ${escapeHtml(G.players[pi].name)}</span>${isT?'<span class="cp-badge">sous le feu</span>':'<span class="cp-sub">à l\'abri</span>'}</div>`+body;
+  G.order.forEach((pi,k)=>{
+    const isT=k===tgt;const opened=(!isT&&siegeShow===k);const big=isT||opened;
+    const stt=siegeState(k,st.hp[k]);const kingOnly=stt.roi.hp>0&&!stt.roi.locked;
+    const panel=document.createElement('div');
+    panel.className='castlepanel'+(isT?' target':'')+(opened?' opened':'')+((isT&&kingOnly)?' kingtime':'');
+    const body=big?`<div class="castlewrap${(isT&&shake)?' castle-shake':''}">${drawCastle(stt)}</div>`:castleSummaryHTML(k,st.hp[k]);
+    let badge;
+    if(isT)badge=kingOnly?'<span class="cp-badge kingbadge">👑 Roi !</span>':'<span class="cp-badge">sous le feu</span>';
+    else badge=opened?'<span class="cp-sub cp-toggle">🔽 réduire</span>':'<span class="cp-sub cp-toggle">🔍 agrandir</span>';
+    const call=(isT&&kingOnly)?'<div class="king-call">👑 Capturez le Roi au Bull !</div>':'';
+    panel.innerHTML=`<div class="cp-head"><span class="cp-name" style="color:${G.players[pi].color}">${isT?'🎯':'🛡️'} Château de ${escapeHtml(G.players[pi].name)}</span>${badge}</div>`+body+call;
+    if(!isT){panel.style.cursor='pointer';panel.onclick=function(){siegeShow=(siegeShow===k)?null:k;renderSiege();};}
     cont.appendChild(panel);});
   // slots
   const ds=document.getElementById('sdartslots');ds.innerHTML='';
@@ -1356,7 +1376,9 @@ function renderSiege(){
   if(remoteActive&&!G.finished){
     document.getElementById('swho').innerHTML=remLocked
       ?('🌐 À '+escapeHtml(p.name)+' de jouer — en attente…')
-      :('🌐 À toi — attaque le château de <b>'+escapeHtml(G.players[G.order[tgt]].name)+'</b>');
+      :(tgtKingOnly
+        ?('🌐 👑 À toi — capturez le Roi de <b>'+escapeHtml(G.players[G.order[tgt]].name)+'</b> au Bull !')
+        :('🌐 À toi — attaque le château de <b>'+escapeHtml(G.players[G.order[tgt]].name)+'</b>'));
     document.getElementById('swho').style.color=p.color;
   }
 }
@@ -1655,7 +1677,7 @@ function hostStart(){
   G={type:settings.gameType,start:settings.start,out:settings.out,cricketMode:settings.cmode,sdiff:settings.sdiff,bdiff:settings.bdiff,
      maxTurns:(settings.gameType==='siege'||settings.gameType==='bataille')?null:(settings.turns==='limite'?settings.maxTurns:null),media:settings.media,
      players,order:ord,n:ord.length,committed:[],current:[],mod:1,finished:false,winnerPos:null,endReason:null,remote:true};
-  if(G.type==='siege'){G.castles=G.order.map(()=>genCastle(settings.sdiff));window._siegePrevHp=null;}
+  if(G.type==='siege'){G.castles=G.order.map(()=>genCastle(settings.sdiff));window._siegePrevHp=null;siegeShow=null;}
   if(G.type==='bataille'){G.fleets=G.order.map(()=>genFleet());window._batPrevSunk=null;}
   go(G.type==='cricket'?'cricket':(G.type==='siege'?'siege':(G.type==='bataille'?'bataille':'game')));render();
   startMedia();
