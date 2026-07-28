@@ -16,6 +16,19 @@
     --green:#46c98a; --grey:#5b6573; --txt:#f4f1ea; --muted:#9aa2ad; --line:#2b323c;
     --ink:#15120a; --red:#d8463f;
   }
+  /* ===== Thème clair (champagne & blanc) ===== */
+  body.light{
+    --bg:#f6efe1; --card:#ffffff; --card2:#f1e8d6;
+    --champ:#b78f34; --champ-bright:#b78f34; --champ-deep:#8f6d20;
+    --green:#2f9e6a; --grey:#8a8172; --txt:#2b2720; --muted:#8a8172; --line:#e7ddc7;
+    --ink:#2a2205; --red:#c73b32;
+  }
+  body.light{background:radial-gradient(900px 500px at 50% -10%,#fffdf7,#f4ecdb 62%);}
+  body.light .btn{box-shadow:0 6px 16px rgba(176,141,46,.28);}
+  body.light .tb.act{background:rgba(183,143,52,.12);}
+  body.light .chip.on{background:rgba(183,143,52,.14);}
+  .themebtn{position:absolute;top:calc(10px + env(safe-area-inset-top));right:14px;width:40px;height:40px;border-radius:50%;background:var(--card);border:1px solid var(--line);color:var(--txt);font-size:18px;cursor:pointer;z-index:6;display:flex;align-items:center;justify-content:center;}
+  .themebtn:active{transform:translateY(1px);}
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;}
   html,body{height:100%;}
   body{background:radial-gradient(900px 500px at 50% -10%,#1a1f27,#0e1014 62%);color:var(--txt);overflow:hidden;}
@@ -300,6 +313,7 @@
 
   <!-- HOME -->
   <section id="home" class="screen on">
+    <button id="themeToggle" class="themebtn" onclick="toggleTheme()" title="Thème clair / sombre">🌙</button>
     <div class="spacer"></div>
     <div style="text-align:center;">
       <span id="homeLogo"></span>
@@ -321,7 +335,7 @@
         <a class="cb-foot-beer" href="https://buymeacoffee.com/jeremycesar" target="_blank" rel="noopener noreferrer">🥂 Offrir une petite coupe</a>
         <a class="cb-foot-mail" href="mailto:positivereco.app@gmail.com?subject=Un%20petit%20mot%20pour%20ConviBulle%20%F0%9F%8E%AF">💌 Écrire un mot</a>
       </div>
-      <p class="cb-foot-ver">ConviBulle v1.9.3 · créé par Jeremy <span class="cb-heart">♥</span></p>
+      <p class="cb-foot-ver">ConviBulle v1.9.4 · créé par Jeremy <span class="cb-heart">♥</span></p>
     </footer>
   </section>
 
@@ -1807,7 +1821,12 @@ function installApp(){
   else{toast('Sur iPhone : bouton Partager ⎙ puis « Sur l\'écran d\'accueil ».');}
 }
 
+/* ============ THÈME (clair / sombre) ============ */
+function applyTheme(t){document.body.classList.toggle('light',t==='light');const b=document.getElementById('themeToggle');if(b)b.textContent=(t==='light')?'☀️':'🌙';}
+function toggleTheme(){const nt=document.body.classList.contains('light')?'dark':'light';try{localStorage.setItem('cb_theme',nt);}catch(e){}applyTheme(nt);}
+
 /* ============ INIT ============ */
+try{applyTheme(localStorage.getItem('cb_theme')||'dark');}catch(e){}
 document.getElementById('homeLogo').innerHTML='<div style="width:96px;height:96px;margin:0 auto;">'+logoSVG()+'</div>';
 renderHome();
 let _rzT=null;
