@@ -356,7 +356,7 @@
         <a class="cb-foot-beer" href="https://buymeacoffee.com/jeremycesar" target="_blank" rel="noopener noreferrer">🥂 Offrir une petite coupe</a>
         <a class="cb-foot-mail" href="mailto:positivereco.app@gmail.com?subject=Un%20petit%20mot%20pour%20ConviBulle%20%F0%9F%8E%AF">💌 Écrire un mot</a>
       </div>
-      <p class="cb-foot-ver">ConviBulle v1.9.7 · créé par Jeremy <span class="cb-heart">♥</span></p>
+      <p class="cb-foot-ver">ConviBulle v1.9.8 · créé par Jeremy <span class="cb-heart">♥</span></p>
     </footer>
   </section>
 
@@ -726,9 +726,12 @@ function saveRoster(){try{localStorage.setItem('cb_roster',JSON.stringify(roster
 const CB_SAVE_KEY='cb_savedgame';
 const CB_SAVE_TTL=12*3600*1000; // 12h : au-delà, on ne restaure plus
 function gameScreenId(){return G.type==='cricket'?'cricket':(G.type==='siege'?'siege':(G.type==='bataille'?'bataille':'game'));}
+function onGameScreen(){return ['game','cricket','siege','bataille'].some(id=>{const el=document.getElementById(id);return el&&el.classList.contains('on');});}
 function saveGame(){
   try{
-    if(!G||G.finished||remoteActive){localStorage.removeItem(CB_SAVE_KEY);return;}
+    // On ne sauvegarde que si une partie est réellement en cours à l'écran.
+    // (évite de ré-enregistrer une partie qu'on vient de quitter volontairement)
+    if(!G||G.finished||remoteActive||!onGameScreen()){localStorage.removeItem(CB_SAVE_KEY);return;}
     localStorage.setItem(CB_SAVE_KEY,JSON.stringify({t:Date.now(),screen:gameScreenId(),G:G}));
   }catch(e){}
 }
@@ -1264,6 +1267,7 @@ function quitGame(){
   if(!confirm('Quitter la partie en cours ?'))return;
   clearSavedGame();
   leaveRoom();
+  G=null;
   go('home');
 }
 function finishGame(){
