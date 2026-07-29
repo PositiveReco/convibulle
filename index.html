@@ -91,7 +91,12 @@
   .tb{flex:1;min-width:64px;text-align:center;padding:7px 3px;border-radius:9px;background:var(--card);border:1px solid var(--line);}
   .tb .nm{font-size:10px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .tb .sc{font-size:17px;font-weight:800;}
-  .tb.act{border-color:var(--champ);background:rgba(230,204,126,.14);}
+  .tb{position:relative;transition:transform .18s,box-shadow .18s;}
+  .tb.act{border-color:var(--champ);background:rgba(230,204,126,.18);transform:translateY(-2px) scale(1.05);z-index:2;box-shadow:0 0 0 2px var(--champ) inset,0 6px 18px rgba(230,204,126,.35);animation:tbActPulse 1.7s ease-in-out infinite;}
+  .tb.act .nm{font-size:11px;font-weight:800;}
+  .tb.act .sc{color:var(--champ-bright);}
+  .tb.act::after{content:"🎯";position:absolute;top:-10px;left:50%;transform:translateX(-50%);width:21px;height:21px;line-height:21px;font-size:12px;text-align:center;border-radius:50%;background:linear-gradient(180deg,var(--champ-bright),var(--champ-deep));box-shadow:0 2px 7px rgba(0,0,0,.4);}
+  @keyframes tbActPulse{0%,100%{box-shadow:0 0 0 2px var(--champ) inset,0 6px 16px rgba(230,204,126,.28);}50%{box-shadow:0 0 0 2px var(--champ) inset,0 6px 22px rgba(230,204,126,.55);}}
   .tb-turns{flex:0 0 auto;margin-left:auto;display:flex;flex-direction:column;justify-content:center;text-align:center;padding:6px 11px;border-radius:9px;background:var(--card);border:1px dashed var(--champ-deep);}
   .tb-turns .tt-lab{font-size:9px;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);}
   .tb-turns .tt-val{font-size:16px;font-weight:800;color:var(--champ);line-height:1.05;}
@@ -335,7 +340,7 @@
         <a class="cb-foot-beer" href="https://buymeacoffee.com/jeremycesar" target="_blank" rel="noopener noreferrer">🥂 Offrir une petite coupe</a>
         <a class="cb-foot-mail" href="mailto:positivereco.app@gmail.com?subject=Un%20petit%20mot%20pour%20ConviBulle%20%F0%9F%8E%AF">💌 Écrire un mot</a>
       </div>
-      <p class="cb-foot-ver">ConviBulle v1.9.4 · créé par Jeremy <span class="cb-heart">♥</span></p>
+      <p class="cb-foot-ver">ConviBulle v1.9.5 · créé par Jeremy <span class="cb-heart">♥</span></p>
     </footer>
   </section>
 
@@ -687,6 +692,32 @@ function loadRoster(){let r=[];try{r=JSON.parse(localStorage.getItem('cb_roster'
   if(!Array.isArray(r)||!r.length)r=[{name:'Joueur 1',color:COLORS[0]},{name:'Joueur 2',color:COLORS[1]}];
   return r.map((p,i)=>({id:p.id||uid(),name:p.name||('Joueur '+(i+1)),color:p.color||COLORS[i%COLORS.length],selected:p.selected!==false}));}
 function saveRoster(){try{localStorage.setItem('cb_roster',JSON.stringify(roster));}catch(e){}}
+/* ============ REPRISE DE PARTIE (persistance locale) ============ */
+const CB_SAVE_KEY='cb_savedgame';
+const CB_SAVE_TTL=12*3600*1000; // 12h : au-delà, on ne restaure plus
+function gameScreenId(){return G.type==='cricket'?'cricket':(G.type==='siege'?'siege':(G.type==='bataille'?'bataille':'game'));}
+function saveGame(){
+  try{
+    if(!G||G.finished||remoteActive){localStorage.removeItem(CB_SAVE_KEY);return;}
+    localStorage.setItem(CB_SAVE_KEY,JSON.stringify({t:Date.now(),screen:gameScreenId(),G:G}));
+  }catch(e){}
+}
+function clearSavedGame(){try{localStorage.removeItem(CB_SAVE_KEY);}catch(e){}}
+function restoreGame(){
+  let raw=null;try{raw=localStorage.getItem(CB_SAVE_KEY);}catch(e){return false;}
+  if(!raw)return false;
+  let data=null;try{data=JSON.parse(raw);}catch(e){clearSavedGame();return false;}
+  if(!data||!data.G||data.G.finished||!Array.isArray(data.G.order)||!data.G.order.length){clearSavedGame();return false;}
+  if(!data.t||(Date.now()-data.t)>CB_SAVE_TTL){clearSavedGame();return false;}
+  G=data.G;
+  // on repart proprement : réinitialise les indicateurs transitoires (bot, animations)
+  botBusy=false;_fromBot=false;siegeShow=null;window._siegePrevHp=null;window._batPrevSunk=null;
+  // si on reprend pile pendant le tour du bot, on repart sur une volée propre
+  try{if(curIsBot())G.current=[];}catch(e){}
+  go(data.screen||gameScreenId());
+  render();maybeBotTurn();
+  return true;
+}
 /* ============ GAMES STORAGE (Étape 2) ============ */
 function loadGames(){try{return JSON.parse(localStorage.getItem('cb_games'))||[];}catch(e){return [];}}
 function statsFor(id){const games=loadGames();let gp=0,gw=0,pts=0,turns=0,best=0;
@@ -892,7 +923,7 @@ function startGame(){
   if(G.type==='bataille'){G.fleets=G.order.map(()=>genFleet());window._batPrevSunk=null;}
   go(G.type==='cricket'?'cricket':(G.type==='siege'?'siege':(G.type==='bataille'?'bataille':'game')));render();maybeBotTurn();
 }
-function render(){if(G&&G.type==='cricket')renderCricket();else if(G&&G.type==='siege')renderSiege();else if(G&&G.type==='bataille')renderBataille();else renderGame();if(remoteActive&&G&&G.media&&G.media!=='none')updateMediaView();remotePush();}
+function render(){if(G&&G.type==='cricket')renderCricket();else if(G&&G.type==='siege')renderSiege();else if(G&&G.type==='bataille')renderBataille();else renderGame();if(remoteActive&&G&&G.media&&G.media!=='none')updateMediaView();saveGame();remotePush();}
 /* ============ CRICKET ENGINE (Étape 3) ============ */
 const CRICKET_TARGETS=[20,19,18,17,16,15,25];
 function cricketCompute(includeCurrent){
@@ -1153,10 +1184,12 @@ function undo(){
 function quitGame(){
   if(botBusy)return;
   if(!confirm('Quitter la partie en cours ?'))return;
+  clearSavedGame();
   leaveRoom();
   go('home');
 }
 function finishGame(){
+  clearSavedGame();
   const winner=G.players[G.order[G.winnerPos]];
   localStorage.setItem('cb_last',winner.name+' a gagné 🏆');
   recordGame();
@@ -1829,6 +1862,11 @@ function toggleTheme(){const nt=document.body.classList.contains('light')?'dark'
 try{applyTheme(localStorage.getItem('cb_theme')||'dark');}catch(e){}
 document.getElementById('homeLogo').innerHTML='<div style="width:96px;height:96px;margin:0 auto;">'+logoSVG()+'</div>';
 renderHome();
+// Reprise d'une partie locale interrompue (app réduite, rechargée, etc.)
+try{restoreGame();}catch(e){}
+// Filet de sécurité : sauvegarde dès que l'app passe en arrière-plan ou se ferme
+window.addEventListener('pagehide',()=>{try{saveGame();}catch(e){}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){try{saveGame();}catch(e){}}});
 let _rzT=null;
 window.addEventListener('resize',()=>{clearTimeout(_rzT);_rzT=setTimeout(()=>{if(G&&!G.finished&&(document.getElementById('siege').classList.contains('on')||document.getElementById('game').classList.contains('on')||document.getElementById('cricket').classList.contains('on')))render();},150);});
 if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
