@@ -97,6 +97,22 @@
   .tb.act .sc{color:var(--champ-bright);}
   .tb.act::after{content:"🎯";position:absolute;top:-10px;left:50%;transform:translateX(-50%);width:21px;height:21px;line-height:21px;font-size:12px;text-align:center;border-radius:50%;background:linear-gradient(180deg,var(--champ-bright),var(--champ-deep));box-shadow:0 2px 7px rgba(0,0,0,.4);}
   @keyframes tbActPulse{0%,100%{box-shadow:0 0 0 2px var(--champ) inset,0 6px 16px rgba(230,204,126,.28);}50%{box-shadow:0 0 0 2px var(--champ) inset,0 6px 22px rgba(230,204,126,.55);}}
+  /* Éjection (301 Élimination, mode à chaque fléchette) */
+  .tb.knocked{animation:tbKnock .72s cubic-bezier(.36,.07,.19,.97);border-color:var(--red)!important;box-shadow:0 0 0 2px var(--red) inset,0 0 20px rgba(216,70,63,.7);z-index:4;}
+  .tb.knocked .nm{color:#ff9a90!important;}
+  .tb.knocked .sc{color:#fff;animation:knockScore .72s ease-out;}
+  .tb.knocked::before{content:"💥";position:absolute;top:50%;left:50%;font-size:30px;pointer-events:none;z-index:6;animation:knockBurst .72s ease-out both;}
+  @keyframes tbKnock{
+    0%{transform:scale(1) rotate(0);}
+    12%{transform:scale(1.15) rotate(-6deg);}
+    28%{transform:scale(.88) rotate(6deg);}
+    44%{transform:scale(1.07) rotate(-3deg);}
+    60%{transform:scale(.96) rotate(2deg);}
+    78%{transform:scale(1.02) rotate(-1deg);}
+    100%{transform:scale(1) rotate(0);}
+  }
+  @keyframes knockScore{0%{transform:scale(1.7);}45%{transform:scale(1.7);}100%{transform:scale(1);}}
+  @keyframes knockBurst{0%{opacity:0;transform:translate(-50%,-50%) scale(.2);}22%{opacity:1;transform:translate(-50%,-50%) scale(1.35);}100%{opacity:0;transform:translate(-50%,-50%) scale(2);}}
   .tb-turns{flex:0 0 auto;margin-left:auto;display:flex;flex-direction:column;justify-content:center;text-align:center;padding:6px 11px;border-radius:9px;background:var(--card);border:1px dashed var(--champ-deep);}
   .tb-turns .tt-lab{font-size:9px;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);}
   .tb-turns .tt-val{font-size:16px;font-weight:800;color:var(--champ);line-height:1.05;}
@@ -340,7 +356,7 @@
         <a class="cb-foot-beer" href="https://buymeacoffee.com/jeremycesar" target="_blank" rel="noopener noreferrer">🥂 Offrir une petite coupe</a>
         <a class="cb-foot-mail" href="mailto:positivereco.app@gmail.com?subject=Un%20petit%20mot%20pour%20ConviBulle%20%F0%9F%8E%AF">💌 Écrire un mot</a>
       </div>
-      <p class="cb-foot-ver">ConviBulle v1.9.6 · créé par Jeremy <span class="cb-heart">♥</span></p>
+      <p class="cb-foot-ver">ConviBulle v1.9.7 · créé par Jeremy <span class="cb-heart">♥</span></p>
     </footer>
   </section>
 
@@ -725,7 +741,7 @@ function restoreGame(){
   if(!data.t||(Date.now()-data.t)>CB_SAVE_TTL){clearSavedGame();return false;}
   G=data.G;
   // on repart proprement : réinitialise les indicateurs transitoires (bot, animations)
-  botBusy=false;_fromBot=false;siegeShow=null;window._siegePrevHp=null;window._batPrevSunk=null;
+  botBusy=false;_fromBot=false;siegeShow=null;window._siegePrevHp=null;window._batPrevSunk=null;window._elimPrevTotals=null;
   // si on reprend pile pendant le tour du bot, on repart sur une volée propre
   try{if(curIsBot())G.current=[];}catch(e){}
   go(data.screen||gameScreenId());
@@ -943,7 +959,7 @@ function startGame(){
      committed:[], current:[], mod:1, finished:false, winnerPos:null, endReason:null};
   if(G.type==='siege'){G.castles=G.order.map(()=>genCastle(settings.sdiff));window._siegePrevHp=null;siegeShow=null;}
   if(G.type==='bataille'){G.fleets=G.order.map(()=>genFleet());window._batPrevSunk=null;}
-  if(G.type==='elim'){G.start=ELIM_TARGET;G.elimMode=settings.emode;}
+  if(G.type==='elim'){G.start=ELIM_TARGET;G.elimMode=settings.emode;window._elimPrevTotals=null;}
   go(G.type==='cricket'?'cricket':(G.type==='siege'?'siege':(G.type==='bataille'?'bataille':'game')));render();maybeBotTurn();
 }
 function render(){if(G&&G.type==='cricket')renderCricket();else if(G&&G.type==='siege')renderSiege();else if(G&&G.type==='bataille')renderBataille();else if(G&&G.type==='elim')renderElim();else renderGame();if(remoteActive&&G&&G.media&&G.media!=='none')updateMediaView();saveGame();remotePush();}
@@ -1314,19 +1330,28 @@ function renderGame(){
 /* ============ 301 ÉLIMINATION RENDER ============ */
 function renderElim(){
   const pos=currentPos();
-  const comp=elimCompute(false);
+  const totals=elimCompute(true).totals; // totaux LIVE : l'éjection s'affiche dès la fléchette (mode "à chaque fléchette")
+  // Début de partie : pas d'ancien état => on évite une fausse animation
+  if(!G.committed.length&&(!G.current||!G.current.length))window._elimPrevTotals=null;
+  // Détecte qui vient de tomber à 0 depuis le dernier rendu
+  const prev=window._elimPrevTotals,knocked={};
+  if(prev)for(let k=0;k<G.n;k++){if(prev[k]>0&&totals[k]===0)knocked[k]=true;}
   // turnbar : totaux qui montent
   const tbar=document.getElementById('turnbar');tbar.innerHTML='';
   prependQuitBtn(tbar);
   G.order.forEach((pi,k)=>{const p=G.players[pi];const div=document.createElement('div');
-    div.className='tb'+(k===pos?' act':'');
-    div.innerHTML=`<div class="nm" style="color:${k===pos?p.color:''}">${escapeHtml(p.name)}</div><div class="sc">${comp.totals[k]}</div>`;
+    div.className='tb'+(k===pos?' act':'')+(knocked[k]?' knocked':'');
+    div.innerHTML=`<div class="nm" style="color:${k===pos?p.color:''}">${escapeHtml(p.name)}</div><div class="sc">${totals[k]}</div>`;
     tbar.appendChild(div);});
   appendTurnCounter(tbar);
+  const kn=Object.keys(knocked);
+  if(kn.length){const names=kn.map(k=>G.players[G.order[k]].name).join(', ');
+    toast('💥 '+names+(kn.length>1?' éjectés':' éjecté')+' — retour à 0 !');}
+  window._elimPrevTotals=Object.assign({},totals);
   const p=curPlayer();
   document.getElementById('whoTurn').textContent='À '+p.name+' de jouer';
   document.getElementById('whoTurn').style.color=p.color;
-  const live=elimCompute(true).totals[pos];
+  const live=totals[pos];
   document.getElementById('bigScore').textContent=live;
   const need=ELIM_TARGET-live;
   const ll=document.getElementById('liveLine');
@@ -1878,7 +1903,7 @@ function hostStart(){
      players,order:ord,n:ord.length,committed:[],current:[],mod:1,finished:false,winnerPos:null,endReason:null,remote:true};
   if(G.type==='siege'){G.castles=G.order.map(()=>genCastle(settings.sdiff));window._siegePrevHp=null;siegeShow=null;}
   if(G.type==='bataille'){G.fleets=G.order.map(()=>genFleet());window._batPrevSunk=null;}
-  if(G.type==='elim'){G.start=ELIM_TARGET;G.elimMode=settings.emode;}
+  if(G.type==='elim'){G.start=ELIM_TARGET;G.elimMode=settings.emode;window._elimPrevTotals=null;}
   go(G.type==='cricket'?'cricket':(G.type==='siege'?'siege':(G.type==='bataille'?'bataille':'game')));render();
   startMedia();
 }
