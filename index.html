@@ -394,7 +394,7 @@
         <a class="cb-foot-beer" href="https://buymeacoffee.com/jeremycesar" target="_blank" rel="noopener noreferrer">🥂 Offrir une petite coupe</a>
         <a class="cb-foot-mail" href="mailto:positivereco.app@gmail.com?subject=Un%20petit%20mot%20pour%20ConviBulle%20%F0%9F%8E%AF">💌 Écrire un mot</a>
       </div>
-      <p class="cb-foot-ver">ConviBulle v1.10.1 · créé par Jeremy <span class="cb-heart">♥</span></p>
+      <p class="cb-foot-ver">ConviBulle v1.10.2 · créé par Jeremy <span class="cb-heart">♥</span></p>
     </footer>
   </section>
 
@@ -1273,7 +1273,7 @@ function genGolfCourse(holes,mode){
   }
   const nums=[];for(let i=1;i<=20;i++)nums.push(i);
   for(let i=nums.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[nums[i],nums[j]]=[nums[j],nums[i]];}
-  const bullCount=(holes>=18)?3:2,numCount=holes-bullCount;
+  const bullCount=1,numCount=holes-bullCount; // un seul trou Bull -> aucun trou en double
   for(let h=0;h<numCount;h++)course.push({kind:'num',target:nums[h%nums.length]});
   for(let b=0;b<bullCount;b++)course.push({kind:'bull',target:25});
   for(let i=course.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[course[i],course[j]]=[course[j],course[i]];}
