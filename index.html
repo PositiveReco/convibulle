@@ -326,6 +326,41 @@
     #b-right .act-row{margin-top:5px;}
     #b-right .act-row .btn,#b-right .undo{padding:9px;}
   }
+  /* golf */
+  #gf-right{display:flex;flex-direction:column;}
+  #golfcard{overflow-x:auto;}
+  .gcard{width:100%;border-collapse:separate;border-spacing:0;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;font-size:13px;}
+  .gcard th,.gcard td{padding:6px 4px;text-align:center;border-bottom:1px solid var(--line);}
+  .gcard tr:last-child th,.gcard tr:last-child td{border-bottom:none;}
+  .gcard th{color:var(--muted);font-weight:700;font-size:11px;background:rgba(255,255,255,.025);}
+  .gcard .htrou{color:var(--champ-bright);font-weight:800;width:34px;}
+  .gcard .hcible{color:var(--muted);font-size:12px;}
+  .gcard tr.curhole td{background:rgba(230,204,126,.12);}
+  .gcard tr.foot td{font-weight:800;background:rgba(230,204,126,.06);border-top:1px solid var(--champ-deep);}
+  .gcard tr.foot small{font-size:10px;font-weight:800;margin-left:2px;}
+  .gp{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;font-weight:800;font-size:13px;}
+  .gp.eagle{background:linear-gradient(180deg,var(--champ-bright),var(--champ-deep));color:var(--ink);border-radius:50%;box-shadow:0 0 0 2px var(--champ-deep) inset;}
+  .gp.birdie{background:rgba(70,201,138,.20);color:var(--green);border-radius:50%;border:1px solid var(--green);}
+  .gp.par{background:var(--card2);color:var(--muted);border-radius:6px;border:1px solid var(--line);}
+  .gp.bogey{background:rgba(216,70,63,.18);color:#e8889a;border-radius:6px;border:1px solid var(--red);}
+  .gp.dash{color:#39414c;font-weight:700;}
+  .gp.pop{animation:pop .32s ease-out;}
+  .numgrid .num.tgt{border-color:var(--champ);color:var(--champ-bright);box-shadow:0 0 0 1px var(--champ-deep) inset;}
+  @media (orientation:landscape) and (min-width:680px){
+    #golf .gamewrap{display:grid;grid-template-columns:1fr 1.05fr;grid-template-rows:auto 1fr;gap:0 18px;}
+    #golf .turnbar{grid-column:1/3;}
+    #gf-left{border-right:1px solid var(--line);padding-right:14px;overflow:auto;min-height:0;}
+    #gf-right{justify-content:flex-start;}
+    #golf .who{margin:3px 0;font-size:12px;}
+    #gf-right .dartslots{margin:3px 0;}
+    #gf-right .slot{height:36px;}
+    #gf-right .mods{margin:2px 0 4px;}
+    #gf-right .mod{padding:7px 0;font-size:13px;}
+    #gf-right .numgrid{gap:4px;}
+    #gf-right .num{padding:7px 0;font-size:14px;}
+    #gf-right .act-row{margin-top:5px;}
+    #gf-right .act-row .btn,#gf-right .undo{padding:9px;}
+  }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -356,7 +391,7 @@
         <a class="cb-foot-beer" href="https://buymeacoffee.com/jeremycesar" target="_blank" rel="noopener noreferrer">🥂 Offrir une petite coupe</a>
         <a class="cb-foot-mail" href="mailto:positivereco.app@gmail.com?subject=Un%20petit%20mot%20pour%20ConviBulle%20%F0%9F%8E%AF">💌 Écrire un mot</a>
       </div>
-      <p class="cb-foot-ver">ConviBulle v1.9.8 · créé par Jeremy <span class="cb-heart">♥</span></p>
+      <p class="cb-foot-ver">ConviBulle v1.10.0 · créé par Jeremy <span class="cb-heart">♥</span></p>
     </footer>
   </section>
 
@@ -371,6 +406,20 @@
       <div class="chip" data-val="siege">🏰 Siège</div>
       <div class="chip" data-val="bataille">🚢 Bataille</div>
       <div class="chip" data-val="elim">🎯 301 Élim</div>
+      <div class="chip" data-val="golf">⛳ Golf</div>
+    </div>
+    <div id="golfRow" style="display:none;">
+      <div class="field-label">Type de Golf</div>
+      <div class="row" data-group="gmode">
+        <div class="chip on" data-val="parcours">Parcours</div>
+        <div class="chip" data-val="approche">Approche</div>
+      </div>
+      <div class="field-label">Nombre de trous</div>
+      <div class="row" data-group="gholes">
+        <div class="chip on" data-val="9">9 trous</div>
+        <div class="chip" data-val="18">18 trous</div>
+      </div>
+      <div class="muted" style="font-size:11px;margin-top:5px;">Score le plus bas gagne (par 3 par trou). « Parcours » : vise le numéro du trou — triple = eagle, double = birdie, simple = par, raté = bogey. « Approche » : atteins le score cible en 1 fléchette (eagle), 2 (birdie) ou 3 (par), sinon bogey.</div>
     </div>
     <div id="elimRow" style="display:none;">
       <div class="field-label">Mode d'éjection</div>
@@ -556,6 +605,29 @@
     </div>
   </section>
 
+  <!-- GOLF -->
+  <section id="golf" class="screen">
+    <div class="gamewrap">
+      <div class="turnbar" id="gfturnbar"></div>
+      <div id="gf-left">
+        <div class="who" id="gfwho" style="font-size:13px;font-weight:700;margin-bottom:8px;"></div>
+        <div id="golfcard"></div>
+      </div>
+      <div id="gf-right">
+        <div class="dartslots" id="gfdartslots"></div>
+        <div class="mods">
+          <div class="mod" id="gfmodD" onclick="setMod(2)">Double</div>
+          <div class="mod" id="gfmodT" onclick="setMod(3)">Triple</div>
+        </div>
+        <div class="numgrid" id="gfnumgrid"></div>
+        <div class="act-row">
+          <button class="undo" id="gfundoBtn" onclick="undo()">↩︎ Annuler</button>
+          <button class="btn" id="gfendTurnBtn" onclick="endTurn()">✓ Valider le trou</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- WIN -->
   <section id="win" class="screen">
     <div class="spacer"></div>
@@ -636,10 +708,17 @@
         <div class="chip" data-val="siege">🏰 Siège</div>
         <div class="chip" data-val="bataille">🚢 Bataille</div>
         <div class="chip" data-val="elim">🎯 301 Élim</div>
+        <div class="chip" data-val="golf">⛳ Golf</div>
       </div>
       <div id="rElimRow" style="display:none;">
         <div class="field-label">Mode d'éjection</div>
         <div class="row" data-group="remode"><div class="chip on" data-val="volley">En fin de volée</div><div class="chip" data-val="dart">À chaque fléchette</div></div>
+      </div>
+      <div id="rGolfRow" style="display:none;">
+        <div class="field-label">Type de Golf</div>
+        <div class="row" data-group="rgmode"><div class="chip on" data-val="parcours">Parcours</div><div class="chip" data-val="approche">Approche</div></div>
+        <div class="field-label">Nombre de trous</div>
+        <div class="row" data-group="rgholes"><div class="chip on" data-val="9">9 trous</div><div class="chip" data-val="18">18 trous</div></div>
       </div>
       <div id="rOutRow">
         <div class="field-label">Sortie</div>
@@ -714,7 +793,7 @@ function logoSVG(g){g=g||'#E6CC7E';
 /* ============ STATE ============ */
 const COLORS=['#E6CC7E','#7fb2ff','#46c98a','#ff8f6b','#a98bff','#ff6fae','#5ad0d0','#ffd23f'];
 let roster=loadRoster();          // [{name,color}]
-let settings={gameType:'x01',start:501,out:'simple',cmode:'standard',emode:'volley',sdiff:'facile',bdiff:'facile',turns:'illimite',maxTurns:20,order:'random',bot:false,botLevel:'confirme',media:'none'};
+let settings={gameType:'x01',start:501,out:'simple',cmode:'standard',emode:'volley',golfMode:'parcours',golfHoles:9,sdiff:'facile',bdiff:'facile',turns:'illimite',maxTurns:20,order:'random',bot:false,botLevel:'confirme',media:'none'};
 let G=null;                        // active game
 
 function uid(){return 'p_'+Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4);}
@@ -725,8 +804,9 @@ function saveRoster(){try{localStorage.setItem('cb_roster',JSON.stringify(roster
 /* ============ REPRISE DE PARTIE (persistance locale) ============ */
 const CB_SAVE_KEY='cb_savedgame';
 const CB_SAVE_TTL=12*3600*1000; // 12h : au-delà, on ne restaure plus
-function gameScreenId(){return G.type==='cricket'?'cricket':(G.type==='siege'?'siege':(G.type==='bataille'?'bataille':'game'));}
-function onGameScreen(){return ['game','cricket','siege','bataille'].some(id=>{const el=document.getElementById(id);return el&&el.classList.contains('on');});}
+function screenForType(t){return t==='cricket'?'cricket':t==='siege'?'siege':t==='bataille'?'bataille':t==='golf'?'golf':'game';}
+function gameScreenId(){return screenForType(G.type);}
+function onGameScreen(){return ['game','cricket','siege','bataille','golf'].some(id=>{const el=document.getElementById(id);return el&&el.classList.contains('on');});}
 function saveGame(){
   try{
     // On ne sauvegarde que si une partie est réellement en cours à l'écran.
@@ -744,7 +824,7 @@ function restoreGame(){
   if(!data.t||(Date.now()-data.t)>CB_SAVE_TTL){clearSavedGame();return false;}
   G=data.G;
   // on repart proprement : réinitialise les indicateurs transitoires (bot, animations)
-  botBusy=false;_fromBot=false;siegeShow=null;window._siegePrevHp=null;window._batPrevSunk=null;window._elimPrevTotals=null;
+  botBusy=false;_fromBot=false;siegeShow=null;window._siegePrevHp=null;window._batPrevSunk=null;window._elimPrevTotals=null;window._golfPrevStrokes=null;
   // si on reprend pile pendant le tour du bot, on repart sur une volée propre
   try{if(curIsBot())G.current=[];}catch(e){}
   go(data.screen||gameScreenId());
@@ -772,9 +852,12 @@ function recordGame(){try{
     if(G.type==='elim'){const et=elimCompute(false).totals[k];
       return {id:p.id||('p_'+p.name),name:p.name,isBot:!!p.isBot,won:k===G.winnerPos,points:et,darts,turns,best:0,remaining:ELIM_TARGET-et};
     }
+    if(G.type==='golf'){const gcAll=golfCompute();
+      return {id:p.id||('p_'+p.name),name:p.name,isBot:!!p.isBot,won:k===G.winnerPos,points:gcAll.totals[k],darts,turns,best:0,remaining:gcAll.vspar[k]};
+    }
     const points=ta.reduce((s,t)=>s+t.scored,0),best=ta.reduce((m,t)=>Math.max(m,t.scored),0);
     return {id:p.id||('p_'+p.name),name:p.name,isBot:!!p.isBot,won:k===G.winnerPos,points,darts,turns,best,remaining:remainingFor(k),avg:turns?+(points/turns).toFixed(1):0};});
-  const rec={id:Date.now(),date:new Date().toISOString(),type:G.type==='cricket'?'Cricket':(G.type==='siege'?'Siège':(G.type==='bataille'?'Bataille':(G.type==='elim'?'301 Élim':String(G.start)))),cmode:G.cricketMode,sdiff:G.sdiff,bdiff:G.bdiff,out:G.out,endReason:G.endReason,players,winnerName:G.players[G.order[G.winnerPos]].name};
+  const rec={id:Date.now(),date:new Date().toISOString(),type:G.type==='cricket'?'Cricket':(G.type==='siege'?'Siège':(G.type==='bataille'?'Bataille':(G.type==='elim'?'301 Élim':(G.type==='golf'?'Golf':String(G.start))))),cmode:G.cricketMode,sdiff:G.sdiff,bdiff:G.bdiff,out:G.out,endReason:G.endReason,players,winnerName:G.players[G.order[G.winnerPos]].name};
   const games=loadGames();games.unshift(rec);if(games.length>200)games.length=200;
   localStorage.setItem('cb_games',JSON.stringify(games));
 }catch(e){}}
@@ -864,15 +947,17 @@ document.querySelectorAll('[data-group]').forEach(grp=>{
         else if(v==='siege')settings.gameType='siege';
         else if(v==='bataille')settings.gameType='bataille';
         else if(v==='elim')settings.gameType='elim';
+        else if(v==='golf')settings.gameType='golf';
         else{settings.gameType='x01';settings.start=parseInt(v);}
         const gt=settings.gameType;
         document.getElementById('outRow').style.display=(gt==='x01')?'block':'none';
         document.getElementById('variantRow').style.display=(gt==='cricket')?'block':'none';
         document.getElementById('elimRow').style.display=(gt==='elim')?'block':'none';
+        document.getElementById('golfRow').style.display=(gt==='golf')?'block':'none';
         document.getElementById('siegeRow').style.display=(gt==='siege')?'block':'none';
         document.getElementById('batailleRow').style.display=(gt==='bataille')?'block':'none';
-        // Siège et Bataille n'utilisent pas la limite de tours : on cache la ligne
-        const usesTurns=(gt!=='siege'&&gt!=='bataille');
+        // Siège, Bataille et Golf n'utilisent pas la limite de tours : on cache la ligne
+        const usesTurns=(gt!=='siege'&&gt!=='bataille'&&gt!=='golf');
         document.getElementById('turnsRow').style.display=usesTurns?'block':'none';
         if(!usesTurns){
           settings.turns='illimite';
@@ -886,11 +971,16 @@ document.querySelectorAll('[data-group]').forEach(grp=>{
       if(g==='cmode')settings.cmode=v;
       if(g==='emode')settings.emode=v;
       if(g==='remode')settings.emode=v;
+      if(g==='gmode')settings.golfMode=v;
+      if(g==='rgmode')settings.golfMode=v;
+      if(g==='gholes')settings.golfHoles=parseInt(v);
+      if(g==='rgholes')settings.golfHoles=parseInt(v);
       if(g==='rtype'){
         if(v==='cricket')settings.gameType='cricket';
         else if(v==='siege')settings.gameType='siege';
         else if(v==='bataille')settings.gameType='bataille';
         else if(v==='elim')settings.gameType='elim';
+        else if(v==='golf')settings.gameType='golf';
         else{settings.gameType='x01';settings.start=parseInt(v);}
         syncLobbyConfigUI();
       }
@@ -963,9 +1053,10 @@ function startGame(){
   if(G.type==='siege'){G.castles=G.order.map(()=>genCastle(settings.sdiff));window._siegePrevHp=null;siegeShow=null;}
   if(G.type==='bataille'){G.fleets=G.order.map(()=>genFleet());window._batPrevSunk=null;}
   if(G.type==='elim'){G.start=ELIM_TARGET;G.elimMode=settings.emode;window._elimPrevTotals=null;}
-  go(G.type==='cricket'?'cricket':(G.type==='siege'?'siege':(G.type==='bataille'?'bataille':'game')));render();maybeBotTurn();
+  if(G.type==='golf'){G.golfMode=settings.golfMode;G.golfHoles=settings.golfHoles;G.course=genGolfCourse(settings.golfHoles,settings.golfMode);G.maxTurns=settings.golfHoles;window._golfPrevStrokes=null;}
+  go(screenForType(G.type));render();maybeBotTurn();
 }
-function render(){if(G&&G.type==='cricket')renderCricket();else if(G&&G.type==='siege')renderSiege();else if(G&&G.type==='bataille')renderBataille();else if(G&&G.type==='elim')renderElim();else renderGame();if(remoteActive&&G&&G.media&&G.media!=='none')updateMediaView();saveGame();remotePush();}
+function render(){if(G&&G.type==='cricket')renderCricket();else if(G&&G.type==='siege')renderSiege();else if(G&&G.type==='bataille')renderBataille();else if(G&&G.type==='elim')renderElim();else if(G&&G.type==='golf')renderGolf();else renderGame();if(remoteActive&&G&&G.media&&G.media!=='none')updateMediaView();saveGame();remotePush();}
 /* ============ CRICKET ENGINE (Étape 3) ============ */
 const CRICKET_TARGETS=[20,19,18,17,16,15,25];
 function cricketCompute(includeCurrent){
@@ -1166,6 +1257,124 @@ function evalElim(){
   if(total===ELIM_TARGET){commitTurn(false);G.finished=true;G.winnerPos=pos;G.endReason='elim';finishGame();return true;}
   return false;
 }
+/* ============ GOLF ENGINE ============ */
+// Génère le parcours : "parcours" = numéros mélangés + quelques trous Bull ; "approche" = scores cibles variés.
+function genGolfCourse(holes,mode){
+  const course=[];
+  if(mode==='approche'){
+    const pool=[16,18,20,24,28,32,36,40,45,48,50,54,57,60,66,72,75,80,90];
+    for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
+    for(let h=0;h<holes;h++)course.push({kind:'score',target:pool[h%pool.length]});
+    return course;
+  }
+  const nums=[];for(let i=1;i<=20;i++)nums.push(i);
+  for(let i=nums.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[nums[i],nums[j]]=[nums[j],nums[i]];}
+  const bullCount=(holes>=18)?3:2,numCount=holes-bullCount;
+  for(let h=0;h<numCount;h++)course.push({kind:'num',target:nums[h%nums.length]});
+  for(let b=0;b<bullCount;b++)course.push({kind:'bull',target:25});
+  for(let i=course.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[course[i],course[j]]=[course[j],course[i]];}
+  return course;
+}
+// Coups pour un trou d'après les fléchettes : eagle=1, birdie=2, par=3, bogey=4 (le plus bas est le meilleur).
+function golfHoleStrokes(hole,darts){
+  if(!darts||!darts.length)return 4;
+  if(hole.kind==='score'){
+    let run=0;for(let k=0;k<darts.length;k++){run+=dartPoints(darts[k]);if(run===hole.target)return k+1;if(run>hole.target)return 4;}
+    return 4;
+  }
+  if(hole.kind==='bull'){
+    let best=4;for(const d of darts){if(d.num===25)best=Math.min(best,d.mult===2?2:3);}
+    return best;
+  }
+  let best=4;for(const d of darts){if(d.num===hole.target)best=Math.min(best,4-d.mult);}
+  return best;
+}
+// Dérive la carte complète : coups par joueur/trou, totaux, écart au par.
+function golfCompute(){
+  const n=G.n,holes=G.golfHoles,strokes={};
+  for(let k=0;k<n;k++)strokes[k]=[];
+  for(let i=0;i<G.committed.length;i++){const pos=i%n,h=Math.floor(i/n);if(h>=holes)break;
+    strokes[pos][h]=golfHoleStrokes(G.course[h],G.committed[i].darts);}
+  const totals={},played={},vspar={};
+  for(let k=0;k<n;k++){let t=0,p=0;for(let h=0;h<holes;h++){if(strokes[k][h]!=null){t+=strokes[k][h];p++;}}totals[k]=t;played[k]=p;vspar[k]=t-3*p;}
+  return {strokes,totals,played,vspar};
+}
+// Approche : termine la volée dès que la cible est atteinte (ou dépassée / 3 fléchettes = bogey).
+function evalGolf(){
+  if(G.golfMode!=='approche')return false; // parcours : on garde le meilleur des 3, validation manuelle
+  const h=Math.floor(G.committed.length/G.n),hole=G.course[h],sum=turnSum(G.current);
+  if(sum===hole.target||sum>hole.target||G.current.length>=3){commitTurn(false);afterTurnAdvance();return true;}
+  return false;
+}
+function golfStrokeName(s){return s===1?'Eagle':s===2?'Birdie':s===3?'Par':'Bogey';}
+function golfStrokeClass(s){return s===1?'eagle':s===2?'birdie':s===3?'par':'bogey';}
+function golfVsparLabel(v){return v===0?'PAR':(v>0?'+'+v:''+v);}
+function golfShort(s){s=s||'';return s.length>7?s.slice(0,6)+'…':s;}
+/* ============ GOLF RENDER ============ */
+function renderGolf(){
+  const n=G.n,holes=G.golfHoles,pos=currentPos();
+  const h=Math.floor(G.committed.length/n); // trou courant (0-based)
+  const gc=golfCompute();
+  const p=curPlayer(),hole=h<holes?G.course[h]:null;
+  // turnbar : totaux + surbrillance joueur actif + compteur de trou
+  const tb=document.getElementById('gfturnbar');tb.innerHTML='';
+  prependQuitBtn(tb);
+  G.order.forEach((pi,k)=>{const pl=G.players[pi];const div=document.createElement('div');div.className='tb'+(k===pos?' act':'');
+    div.innerHTML=`<div class="nm" style="color:${k===pos?pl.color:''}">${escapeHtml(pl.name)}</div><div class="sc">${gc.totals[k]} <small style="font-size:10px;color:${gc.vspar[k]<0?'var(--green)':gc.vspar[k]>0?'var(--red)':'var(--muted)'}">${golfVsparLabel(gc.vspar[k])}</small></div>`;
+    tb.appendChild(div);});
+  const tc=document.createElement('div');tc.className='tb-turns';
+  tc.innerHTML=`<span class="tt-lab">Trou</span><span class="tt-val">${Math.min(h+1,holes)}/${holes}</span>`;tb.appendChild(tc);
+  // en-tête "qui joue"
+  const cibleTxt=hole?(hole.kind==='score'?('atteins <b>'+hole.target+'</b>'):(hole.kind==='bull'?'vise le <b>Bull</b> 🎯':'vise le <b>'+hole.target+'</b>')):'';
+  document.getElementById('gfwho').innerHTML='⛳ À '+escapeHtml(p.name)+' — trou '+(h+1)+' : '+cibleTxt;
+  document.getElementById('gfwho').style.color=p.color;
+  // carte de scores (avec pop sur les cases nouvellement remplies + célébration eagle/birdie)
+  const prev=window._golfPrevStrokes||{},prevCount=Object.keys(prev).length,nowMap={};let celebrate=null;
+  let head='<tr><th class="htrou">Trou</th><th class="hcible">Cible</th>'+G.order.map(pi=>`<th>${escapeHtml(golfShort(G.players[pi].name))}</th>`).join('')+'</tr>';
+  let body='';
+  for(let hh=0;hh<holes;hh++){
+    const cur=(hh===h);
+    const co=G.course[hh],cible=co.kind==='bull'?'Bull':co.target;
+    body+=`<tr class="${cur?'curhole':''}"><td class="htrou">${hh+1}</td><td class="hcible">${cible}</td>`;
+    for(let k=0;k<n;k++){const st=gc.strokes[k][hh];
+      if(st!=null){const key=k+'_'+hh;nowMap[key]=st;const isNew=(prev[key]==null);
+        if(isNew&&st<=2&&prevCount>0)celebrate=st;
+        body+=`<td><span class="gp ${golfStrokeClass(st)}${isNew?' pop':''}">${st}</span></td>`;
+      } else {
+        body+=`<td>${(cur&&k===pos)?'<span class="hcible">…</span>':'<span class="gp dash">–</span>'}</td>`;
+      }
+    }
+    body+='</tr>';
+  }
+  let foot=`<tr class="foot"><td colspan="2" style="text-align:left">Total</td>`+G.order.map((pi,k)=>`<td>${gc.totals[k]}<small style="color:${gc.vspar[k]<0?'var(--green)':gc.vspar[k]>0?'var(--red)':'var(--muted)'}">${golfVsparLabel(gc.vspar[k])}</small></td>`).join('')+'</tr>';
+  document.getElementById('golfcard').innerHTML='<table class="gcard">'+head+body+foot+'</table>';
+  window._golfPrevStrokes=nowMap;
+  if(celebrate===1)toast('🦅 Eagle !');else if(celebrate===2)toast('🐦 Birdie !');
+  // slots
+  const ds=document.getElementById('gfdartslots');ds.innerHTML='';
+  for(let i=0;i<3;i++){const d=G.current[i];const cur=(i===G.current.length);
+    const div=document.createElement('div');div.className='slot'+(d?' done':'')+(cur&&!d?' cur':'')+(d&&curIsBot()&&i===G.current.length-1?' justpop':'');
+    div.innerHTML=`<span class="lab">Flèche ${i+1}</span><span class="val">${d?dartLabel(d):(cur?'…':'–')}</span>`;ds.appendChild(div);}
+  // mods
+  document.getElementById('gfmodD').classList.toggle('on',G.mod===2);
+  document.getElementById('gfmodT').classList.toggle('on',G.mod===3);
+  // numgrid (surligne le numéro cible en Parcours)
+  const tgtNum=(hole&&G.golfMode==='parcours')?(hole.kind==='bull'?25:hole.target):null;
+  const ng=document.getElementById('gfnumgrid');ng.innerHTML='';
+  for(let nmb=1;nmb<=20;nmb++){const b=document.createElement('div');b.className='num'+(tgtNum===nmb?' tgt':'');b.textContent=nmb;b.onclick=()=>pressNum(nmb);ng.appendChild(b);}
+  const bull=document.createElement('div');bull.className='num bull'+(G.mod===3?' dis':'')+(tgtNum===25?' tgt':'');bull.style.gridColumn='span 3';bull.textContent='25 · Bull';bull.onclick=()=>pressNum(25);ng.appendChild(bull);
+  const miss=document.createElement('div');miss.className='num miss';miss.style.gridColumn='span 2';miss.textContent='Raté ✗';miss.onclick=()=>pressNum(0);ng.appendChild(miss);
+  // boutons
+  document.getElementById('gfundoBtn').disabled=(G.current.length===0&&G.committed.length===0);
+  document.getElementById('gfendTurnBtn').textContent=G.current.length?'✓ Valider le trou':'Passer le trou';
+  // bot / remote
+  const botTurn=curIsBot()&&!G.finished;
+  document.getElementById('golf').classList.toggle('botturn',botTurn);
+  if(botTurn){document.getElementById('gfwho').innerHTML='🤖 '+escapeHtml(p.name)+' joue le trou '+(h+1)+'…';document.getElementById('gfwho').style.color=p.color;}
+  const remLocked=remoteLocked();
+  document.getElementById('golf').classList.toggle('remlock',remLocked);
+  if(remoteActive&&!G.finished){document.getElementById('gfwho').innerHTML=remLocked?('🌐 À '+escapeHtml(p.name)+' de jouer — en attente…'):('🌐 À toi — trou '+(h+1)+' : '+cibleTxt);document.getElementById('gfwho').style.color=p.color;}
+}
 // remaining for a player order-position
 function remainingFor(pos){let r=G.start;G.committed.forEach((t,idx)=>{if(idx%G.n===pos)r-=t.scored;});return r;}
 function currentPos(){return G.committed.length%G.n;}
@@ -1205,6 +1414,7 @@ function pressNum(num){
   if(G.type==='siege'){ if(!evalSiege())render(); return; }
   if(G.type==='bataille'){ if(!evalBataille())render(); return; }
   if(G.type==='elim'){ if(!evalElim())render(); return; }
+  if(G.type==='golf'){ if(!evalGolf())render(); return; }
   // evaluate (X01)
   const pos=currentPos();
   const tentative=remainingFor(pos)-turnSum(G.current);
@@ -1244,6 +1454,8 @@ function afterTurnAdvance(){
       G.winnerPos=bp;
     } else if(G.type==='elim'){
       const comp=elimCompute(false);let best=-1,bp=0;for(let k=0;k<G.n;k++){if(comp.totals[k]>best){best=comp.totals[k];bp=k;}}G.winnerPos=bp;
+    } else if(G.type==='golf'){
+      const gc=golfCompute();let best=Infinity,bp=0;for(let k=0;k<G.n;k++){if(gc.totals[k]<best){best=gc.totals[k];bp=k;}}G.winnerPos=bp;
     } else {
       let best=Infinity,bp=0;for(let p=0;p<G.n;p++){const r=remainingFor(p);if(r<best){best=r;bp=p;}}G.winnerPos=bp;
     }
@@ -1258,7 +1470,7 @@ function undo(){
   if(G.current.length>0){G.current.pop();G.mod=1;}
   else if(G.committed.length>0){const t=G.committed.pop();G.current=t.darts.slice();if(G.current.length>0)G.current.pop();G.mod=1;}
   else return;
-  const scr=G.type==='cricket'?'cricket':(G.type==='siege'?'siege':(G.type==='bataille'?'bataille':'game'));
+  const scr=screenForType(G.type);
   if(!document.getElementById(scr).classList.contains('on'))go(scr);
   render();maybeBotTurn();
 }
@@ -1662,6 +1874,14 @@ function renderWin(){
     G.order.forEach((pi,k)=>{const afloat=batShipsAfloat(k,st);
       const div=document.createElement('div');div.className='statline';
       div.innerHTML=`<span>${k===G.winnerPos?'🏆':'🏳️'} ${escapeHtml(G.players[pi].name)}</span><b>${k===G.winnerPos?'vainqueur':'flotte coulée'}</b>`;wrap.appendChild(div);});
+  } else if(G.type==='golf'){
+    document.getElementById('winName').textContent=winner.name+' remporte le parcours ! ⛳';
+    const gc=golfCompute();
+    sub='Golf · '+(G.golfMode==='approche'?'Approche':'Parcours')+' · '+G.golfHoles+' trous (par '+(3*G.golfHoles)+')';
+    const arr=G.order.map((pi,k)=>({name:G.players[pi].name,tot:gc.totals[k],vs:gc.vspar[k]}));
+    arr.sort((a,b)=>a.tot-b.tot);
+    arr.forEach((r,i)=>{const div=document.createElement('div');div.className='statline';
+      div.innerHTML=`<span>${medals[i]||'  '} ${escapeHtml(r.name)}</span><b>${r.tot} <small style="color:${r.vs<0?'var(--green)':r.vs>0?'var(--red)':'var(--muted)'}">(${golfVsparLabel(r.vs)})</small></b>`;wrap.appendChild(div);});
   } else if(G.type==='elim'){
     document.getElementById('winName').textContent=winner.name+' atteint 301 ! 🎯';
     sub='301 Élimination · '+(G.elimMode==='dart'?'éjection à chaque fléchette':'éjection en fin de volée')+(G.endReason==='turns'?' · limite de tours':'');
@@ -1785,6 +2005,20 @@ function botElimTarget(pos){
   for(const c of cand){if(myTotal+c.num*c.mult<=ELIM_TARGET)return c;}
   return {num:0,mult:1};
 }
+function botGolfTarget(pos){
+  const lvl=G.players[G.order[pos]].level||'confirme';
+  const h=Math.floor(G.committed.length/G.n),hole=G.course[h];
+  if(hole.kind==='score'){
+    const need=hole.target-turnSum(G.current);
+    if(need>=1&&need<=60){const f=dartForPoints(need);if(f)return f;}
+    const cand=[{num:20,mult:3},{num:20,mult:1},{num:19,mult:1},{num:15,mult:1},{num:10,mult:1},{num:5,mult:1},{num:3,mult:1},{num:1,mult:1}];
+    for(const c of cand){if(turnSum(G.current)+c.num*c.mult<=hole.target)return c;}
+    return {num:0,mult:1};
+  }
+  if(hole.kind==='bull')return {num:25,mult:(lvl==='debutant')?1:2};
+  const num=hole.target;
+  return {num,mult:(lvl==='debutant')?1:(lvl==='confirme')?2:3};
+}
 function delay(ms){return new Promise(r=>setTimeout(r,ms));}
 function maybeBotTurn(){if(botBusy||!G||G.finished)return;if(curIsBot())botPlayTurn();}
 async function botPlayTurn(){
@@ -1799,6 +2033,7 @@ async function botPlayTurn(){
     else if(G.type==='siege'){target=botSiegeTarget(pos);}
     else if(G.type==='bataille'){target=botBatailleTarget(pos);}
     else if(G.type==='elim'){target=botElimTarget(pos);}
+    else if(G.type==='golf'){target=botGolfTarget(pos);}
     else{const live=remainingFor(pos)-turnSum(G.current);target=botPickTarget(live,G.out,lvl);}
     const actual=botSimulate(target,lvl);
     _fromBot=true;G.mod=actual.mult||1;pressNum(actual.num);_fromBot=false;
@@ -1874,9 +2109,10 @@ function syncLobbyConfigUI(){
   document.getElementById('rOutRow').style.display=(gt==='x01')?'block':'none';
   document.getElementById('rVariantRow').style.display=(gt==='cricket')?'block':'none';
   document.getElementById('rElimRow').style.display=(gt==='elim')?'block':'none';
+  document.getElementById('rGolfRow').style.display=(gt==='golf')?'block':'none';
   document.getElementById('rsdiffRow').style.display=(gt==='siege')?'block':'none';
   document.getElementById('rbdiffRow').style.display=(gt==='bataille')?'block':'none';
-  const usesTurns=(gt!=='siege'&&gt!=='bataille');
+  const usesTurns=(gt!=='siege'&&gt!=='bataille'&&gt!=='golf');
   document.getElementById('rturnsRow').style.display=usesTurns?'block':'none';
   if(!usesTurns)settings.turns='illimite';
   document.querySelectorAll('[data-group="rturns"] .chip').forEach(c=>c.classList.toggle('on',c.dataset.val===settings.turns));
@@ -1908,7 +2144,8 @@ function hostStart(){
   if(G.type==='siege'){G.castles=G.order.map(()=>genCastle(settings.sdiff));window._siegePrevHp=null;siegeShow=null;}
   if(G.type==='bataille'){G.fleets=G.order.map(()=>genFleet());window._batPrevSunk=null;}
   if(G.type==='elim'){G.start=ELIM_TARGET;G.elimMode=settings.emode;window._elimPrevTotals=null;}
-  go(G.type==='cricket'?'cricket':(G.type==='siege'?'siege':(G.type==='bataille'?'bataille':'game')));render();
+  if(G.type==='golf'){G.golfMode=settings.golfMode;G.golfHoles=settings.golfHoles;G.course=genGolfCourse(settings.golfHoles,settings.golfMode);G.maxTurns=settings.golfHoles;window._golfPrevStrokes=null;}
+  go(screenForType(G.type));render();
   startMedia();
 }
 function onRemoteState(s){
@@ -1920,7 +2157,7 @@ function onRemoteState(s){
     if(!wasFinished){try{localStorage.setItem('cb_last',G.players[G.order[G.winnerPos]].name+' a gagné 🏆');recordGame();}catch(e){}}
     renderWin();go('win');
   } else {
-    const scr=G.type==='cricket'?'cricket':(G.type==='siege'?'siege':(G.type==='bataille'?'bataille':'game'));
+    const scr=screenForType(G.type);
     if(!document.getElementById(scr).classList.contains('on'))go(scr);
     render();
     if(G.media&&G.media!=='none')startMedia();
