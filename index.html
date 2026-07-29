@@ -340,7 +340,7 @@
         <a class="cb-foot-beer" href="https://buymeacoffee.com/jeremycesar" target="_blank" rel="noopener noreferrer">🥂 Offrir une petite coupe</a>
         <a class="cb-foot-mail" href="mailto:positivereco.app@gmail.com?subject=Un%20petit%20mot%20pour%20ConviBulle%20%F0%9F%8E%AF">💌 Écrire un mot</a>
       </div>
-      <p class="cb-foot-ver">ConviBulle v1.9.5 · créé par Jeremy <span class="cb-heart">♥</span></p>
+      <p class="cb-foot-ver">ConviBulle v1.9.6 · créé par Jeremy <span class="cb-heart">♥</span></p>
     </footer>
   </section>
 
@@ -354,6 +354,15 @@
       <div class="chip" data-val="cricket">Cricket</div>
       <div class="chip" data-val="siege">🏰 Siège</div>
       <div class="chip" data-val="bataille">🚢 Bataille</div>
+      <div class="chip" data-val="elim">🎯 301 Élim</div>
+    </div>
+    <div id="elimRow" style="display:none;">
+      <div class="field-label">Mode d'éjection</div>
+      <div class="row" data-group="emode">
+        <div class="chip on" data-val="volley">En fin de volée</div>
+        <div class="chip" data-val="dart">À chaque fléchette</div>
+      </div>
+      <div class="muted" style="font-size:11px;margin-top:5px;">Cours de 0 à 301 (pile). Si ton total tombe exactement sur celui d'un adversaire, il repart à 0 ! « Fin de volée » : on compare après tes 3 fléchettes. « À chaque fléchette » : vérifié flèche par flèche, une volée peut éjecter plusieurs joueurs.</div>
     </div>
     <div id="siegeRow" style="display:none;">
       <div class="field-label">Difficulté du siège</div>
@@ -610,6 +619,11 @@
         <div class="chip" data-val="cricket">Cricket</div>
         <div class="chip" data-val="siege">🏰 Siège</div>
         <div class="chip" data-val="bataille">🚢 Bataille</div>
+        <div class="chip" data-val="elim">🎯 301 Élim</div>
+      </div>
+      <div id="rElimRow" style="display:none;">
+        <div class="field-label">Mode d'éjection</div>
+        <div class="row" data-group="remode"><div class="chip on" data-val="volley">En fin de volée</div><div class="chip" data-val="dart">À chaque fléchette</div></div>
       </div>
       <div id="rOutRow">
         <div class="field-label">Sortie</div>
@@ -684,7 +698,7 @@ function logoSVG(g){g=g||'#E6CC7E';
 /* ============ STATE ============ */
 const COLORS=['#E6CC7E','#7fb2ff','#46c98a','#ff8f6b','#a98bff','#ff6fae','#5ad0d0','#ffd23f'];
 let roster=loadRoster();          // [{name,color}]
-let settings={gameType:'x01',start:501,out:'simple',cmode:'standard',sdiff:'facile',bdiff:'facile',turns:'illimite',maxTurns:20,order:'random',bot:false,botLevel:'confirme',media:'none'};
+let settings={gameType:'x01',start:501,out:'simple',cmode:'standard',emode:'volley',sdiff:'facile',bdiff:'facile',turns:'illimite',maxTurns:20,order:'random',bot:false,botLevel:'confirme',media:'none'};
 let G=null;                        // active game
 
 function uid(){return 'p_'+Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4);}
@@ -736,9 +750,12 @@ function recordGame(){try{
     if(G.type==='siege'){
       return {id:p.id||('p_'+p.name),name:p.name,isBot:!!p.isBot,won:k===G.winnerPos,points:0,darts,turns,best:0,remaining:0};
     }
+    if(G.type==='elim'){const et=elimCompute(false).totals[k];
+      return {id:p.id||('p_'+p.name),name:p.name,isBot:!!p.isBot,won:k===G.winnerPos,points:et,darts,turns,best:0,remaining:ELIM_TARGET-et};
+    }
     const points=ta.reduce((s,t)=>s+t.scored,0),best=ta.reduce((m,t)=>Math.max(m,t.scored),0);
     return {id:p.id||('p_'+p.name),name:p.name,isBot:!!p.isBot,won:k===G.winnerPos,points,darts,turns,best,remaining:remainingFor(k),avg:turns?+(points/turns).toFixed(1):0};});
-  const rec={id:Date.now(),date:new Date().toISOString(),type:G.type==='cricket'?'Cricket':(G.type==='siege'?'Siège':(G.type==='bataille'?'Bataille':String(G.start))),cmode:G.cricketMode,sdiff:G.sdiff,bdiff:G.bdiff,out:G.out,endReason:G.endReason,players,winnerName:G.players[G.order[G.winnerPos]].name};
+  const rec={id:Date.now(),date:new Date().toISOString(),type:G.type==='cricket'?'Cricket':(G.type==='siege'?'Siège':(G.type==='bataille'?'Bataille':(G.type==='elim'?'301 Élim':String(G.start)))),cmode:G.cricketMode,sdiff:G.sdiff,bdiff:G.bdiff,out:G.out,endReason:G.endReason,players,winnerName:G.players[G.order[G.winnerPos]].name};
   const games=loadGames();games.unshift(rec);if(games.length>200)games.length=200;
   localStorage.setItem('cb_games',JSON.stringify(games));
 }catch(e){}}
@@ -827,10 +844,12 @@ document.querySelectorAll('[data-group]').forEach(grp=>{
         if(v==='cricket')settings.gameType='cricket';
         else if(v==='siege')settings.gameType='siege';
         else if(v==='bataille')settings.gameType='bataille';
+        else if(v==='elim')settings.gameType='elim';
         else{settings.gameType='x01';settings.start=parseInt(v);}
         const gt=settings.gameType;
         document.getElementById('outRow').style.display=(gt==='x01')?'block':'none';
         document.getElementById('variantRow').style.display=(gt==='cricket')?'block':'none';
+        document.getElementById('elimRow').style.display=(gt==='elim')?'block':'none';
         document.getElementById('siegeRow').style.display=(gt==='siege')?'block':'none';
         document.getElementById('batailleRow').style.display=(gt==='bataille')?'block':'none';
         // Siège et Bataille n'utilisent pas la limite de tours : on cache la ligne
@@ -846,10 +865,13 @@ document.querySelectorAll('[data-group]').forEach(grp=>{
       if(g==='bdiff')settings.bdiff=v;
       if(g==='out')settings.out=v;
       if(g==='cmode')settings.cmode=v;
+      if(g==='emode')settings.emode=v;
+      if(g==='remode')settings.emode=v;
       if(g==='rtype'){
         if(v==='cricket')settings.gameType='cricket';
         else if(v==='siege')settings.gameType='siege';
         else if(v==='bataille')settings.gameType='bataille';
+        else if(v==='elim')settings.gameType='elim';
         else{settings.gameType='x01';settings.start=parseInt(v);}
         syncLobbyConfigUI();
       }
@@ -921,9 +943,10 @@ function startGame(){
      committed:[], current:[], mod:1, finished:false, winnerPos:null, endReason:null};
   if(G.type==='siege'){G.castles=G.order.map(()=>genCastle(settings.sdiff));window._siegePrevHp=null;siegeShow=null;}
   if(G.type==='bataille'){G.fleets=G.order.map(()=>genFleet());window._batPrevSunk=null;}
+  if(G.type==='elim'){G.start=ELIM_TARGET;G.elimMode=settings.emode;}
   go(G.type==='cricket'?'cricket':(G.type==='siege'?'siege':(G.type==='bataille'?'bataille':'game')));render();maybeBotTurn();
 }
-function render(){if(G&&G.type==='cricket')renderCricket();else if(G&&G.type==='siege')renderSiege();else if(G&&G.type==='bataille')renderBataille();else renderGame();if(remoteActive&&G&&G.media&&G.media!=='none')updateMediaView();saveGame();remotePush();}
+function render(){if(G&&G.type==='cricket')renderCricket();else if(G&&G.type==='siege')renderSiege();else if(G&&G.type==='bataille')renderBataille();else if(G&&G.type==='elim')renderElim();else renderGame();if(remoteActive&&G&&G.media&&G.media!=='none')updateMediaView();saveGame();remotePush();}
 /* ============ CRICKET ENGINE (Étape 3) ============ */
 const CRICKET_TARGETS=[20,19,18,17,16,15,25];
 function cricketCompute(includeCurrent){
@@ -1088,6 +1111,42 @@ function evalBataille(){
   if(st.winner!==null){commitTurn(false);G.finished=true;G.winnerPos=st.winner;G.endReason='bataille';finishGame();return true;}
   return false;
 }
+/* ============ 301 ÉLIMINATION ENGINE ============ */
+const ELIM_TARGET=301;
+// Rejoue toute la partie dans l'ordre des tours pour dériver les totaux (avec éjections).
+// Aucune mutation de G : totalement recalculable => undo/persistance gratuits.
+function elimCompute(includeCurrent){
+  const n=G.n,mode=G.elimMode||'volley',totals={};
+  for(let k=0;k<n;k++)totals[k]=0;
+  let winner=null;
+  const knock=(pos,val)=>{if(val>0)for(let q=0;q<n;q++){if(q!==pos&&totals[q]===val)totals[q]=0;}};
+  const playDarts=(pos,darts,doKnock)=>{
+    if(mode==='dart'){
+      let run=totals[pos];
+      for(const d of darts){const nv=run+dartPoints(d);if(nv>ELIM_TARGET)break;run=nv;totals[pos]=run;if(doKnock)knock(pos,run);if(run===ELIM_TARGET){winner=pos;return;}}
+    } else {
+      let run=totals[pos]+darts.reduce((s,d)=>s+dartPoints(d),0);
+      if(run>ELIM_TARGET)run=totals[pos];
+      totals[pos]=run;if(doKnock)knock(pos,run);if(run===ELIM_TARGET)winner=pos;
+    }
+  };
+  for(let i=0;i<G.committed.length;i++){const t=G.committed[i];if(t.busted)continue;playDarts(i%n,t.darts,true);}
+  if(includeCurrent&&G.current.length){
+    const pos=G.committed.length%n;
+    // En mode volée, la volée en cours est affichée en provisoire SANS éjecter (l'éjection tombe à la validation).
+    playDarts(pos,G.current,mode==='dart');
+  }
+  return {totals,winner};
+}
+// Évalue la volée courante à la saisie : bust (>301) ou victoire (301 pile). Éjections = dérivées au rendu.
+function evalElim(){
+  const pos=currentPos();
+  const base=elimCompute(false).totals[pos];
+  const total=base+turnSum(G.current);
+  if(total>ELIM_TARGET){commitTurn(true);toast('Dépassé 301 ! Volée annulée');afterTurnAdvance();return true;}
+  if(total===ELIM_TARGET){commitTurn(false);G.finished=true;G.winnerPos=pos;G.endReason='elim';finishGame();return true;}
+  return false;
+}
 // remaining for a player order-position
 function remainingFor(pos){let r=G.start;G.committed.forEach((t,idx)=>{if(idx%G.n===pos)r-=t.scored;});return r;}
 function currentPos(){return G.committed.length%G.n;}
@@ -1126,6 +1185,7 @@ function pressNum(num){
   if(G.type==='cricket'){ if(!evalCricket())render(); return; }
   if(G.type==='siege'){ if(!evalSiege())render(); return; }
   if(G.type==='bataille'){ if(!evalBataille())render(); return; }
+  if(G.type==='elim'){ if(!evalElim())render(); return; }
   // evaluate (X01)
   const pos=currentPos();
   const tentative=remainingFor(pos)-turnSum(G.current);
@@ -1163,6 +1223,8 @@ function afterTurnAdvance(){
         const better=(bestS===null)||c>bestC||(c===bestC&&(G.cricketMode==='cutthroat'?s<bestS:s>bestS));
         if(better){bestC=c;bestS=s;bp=k;}}
       G.winnerPos=bp;
+    } else if(G.type==='elim'){
+      const comp=elimCompute(false);let best=-1,bp=0;for(let k=0;k<G.n;k++){if(comp.totals[k]>best){best=comp.totals[k];bp=k;}}G.winnerPos=bp;
     } else {
       let best=Infinity,bp=0;for(let p=0;p<G.n;p++){const r=remainingFor(p);if(r<best){best=r;bp=p;}}G.winnerPos=bp;
     }
@@ -1241,6 +1303,56 @@ function renderGame(){
   document.getElementById('undoBtn').disabled=(G.current.length===0&&G.committed.length===0);
   document.getElementById('endTurnBtn').textContent=full?'✓ Tour terminé':(G.current.length?'✓ Terminer la volée':'Passer mon tour');
   // bot turn indicator
+  const botTurn=curIsBot()&&!G.finished;
+  document.getElementById('game').classList.toggle('botturn',botTurn);
+  if(botTurn){document.getElementById('whoTurn').textContent='🤖 '+p.name+' joue';document.getElementById('whoTurn').style.color=p.color;ll.textContent='réfléchit…';ll.className='live think';}
+  // remote indicator
+  const remLocked=remoteLocked();
+  document.getElementById('game').classList.toggle('remlock',remLocked);
+  if(remoteActive&&!G.finished){document.getElementById('whoTurn').textContent=remLocked?('🌐 À '+p.name+' de jouer'):'🌐 À toi de jouer';document.getElementById('whoTurn').style.color=p.color;ll.textContent=remLocked?('en attente de '+p.name+'…'):'à toi !';ll.className='live';}
+}
+/* ============ 301 ÉLIMINATION RENDER ============ */
+function renderElim(){
+  const pos=currentPos();
+  const comp=elimCompute(false);
+  // turnbar : totaux qui montent
+  const tbar=document.getElementById('turnbar');tbar.innerHTML='';
+  prependQuitBtn(tbar);
+  G.order.forEach((pi,k)=>{const p=G.players[pi];const div=document.createElement('div');
+    div.className='tb'+(k===pos?' act':'');
+    div.innerHTML=`<div class="nm" style="color:${k===pos?p.color:''}">${escapeHtml(p.name)}</div><div class="sc">${comp.totals[k]}</div>`;
+    tbar.appendChild(div);});
+  appendTurnCounter(tbar);
+  const p=curPlayer();
+  document.getElementById('whoTurn').textContent='À '+p.name+' de jouer';
+  document.getElementById('whoTurn').style.color=p.color;
+  const live=elimCompute(true).totals[pos];
+  document.getElementById('bigScore').textContent=live;
+  const need=ELIM_TARGET-live;
+  const ll=document.getElementById('liveLine');
+  if(G.current.length){ll.textContent='volée : '+turnSum(G.current)+' pt'+(turnSum(G.current)>1?'s':'')+' · '+need+' pour 301';ll.className='live';}
+  else {ll.textContent='objectif 301 · encore '+need;ll.className='live';}
+  // slots
+  const ds=document.getElementById('dartslots');ds.innerHTML='';
+  for(let i=0;i<3;i++){
+    const d=G.current[i];const cur=(i===G.current.length);
+    const div=document.createElement('div');div.className='slot'+(d?' done':'')+(cur&&!d?' cur':'')+(d&&curIsBot()&&i===G.current.length-1?' justpop':'');
+    div.innerHTML=`<span class="lab">Flèche ${i+1}</span><span class="val">${d?dartLabel(d):(cur?'…':'–')}</span>`;
+    ds.appendChild(div);
+  }
+  // mods
+  document.getElementById('modD').classList.toggle('on',G.mod===2);
+  document.getElementById('modT').classList.toggle('on',G.mod===3);
+  // numgrid
+  const ng=document.getElementById('numgrid');ng.innerHTML='';
+  for(let nmb=1;nmb<=20;nmb++){const b=document.createElement('div');b.className='num';b.textContent=nmb;b.onclick=()=>pressNum(nmb);ng.appendChild(b);}
+  const bull=document.createElement('div');bull.className='num bull'+(G.mod===3?' dis':'');bull.style.gridColumn='span 3';bull.textContent='25 · Bull';bull.onclick=()=>pressNum(25);ng.appendChild(bull);
+  const miss=document.createElement('div');miss.className='num miss';miss.style.gridColumn='span 2';miss.textContent='Raté ✗';miss.onclick=()=>pressNum(0);ng.appendChild(miss);
+  // buttons
+  const full=G.current.length>=3;
+  document.getElementById('undoBtn').disabled=(G.current.length===0&&G.committed.length===0);
+  document.getElementById('endTurnBtn').textContent=full?'✓ Tour terminé':(G.current.length?'✓ Terminer la volée':'Passer mon tour');
+  // bot indicator
   const botTurn=curIsBot()&&!G.finished;
   document.getElementById('game').classList.toggle('botturn',botTurn);
   if(botTurn){document.getElementById('whoTurn').textContent='🤖 '+p.name+' joue';document.getElementById('whoTurn').style.color=p.color;ll.textContent='réfléchit…';ll.className='live think';}
@@ -1521,6 +1633,14 @@ function renderWin(){
     G.order.forEach((pi,k)=>{const afloat=batShipsAfloat(k,st);
       const div=document.createElement('div');div.className='statline';
       div.innerHTML=`<span>${k===G.winnerPos?'🏆':'🏳️'} ${escapeHtml(G.players[pi].name)}</span><b>${k===G.winnerPos?'vainqueur':'flotte coulée'}</b>`;wrap.appendChild(div);});
+  } else if(G.type==='elim'){
+    document.getElementById('winName').textContent=winner.name+' atteint 301 ! 🎯';
+    sub='301 Élimination · '+(G.elimMode==='dart'?'éjection à chaque fléchette':'éjection en fin de volée')+(G.endReason==='turns'?' · limite de tours':'');
+    const comp=elimCompute(false);
+    const arr=G.order.map((pi,k)=>({name:G.players[pi].name,tot:comp.totals[k]}));
+    arr.sort((a,b)=>b.tot-a.tot);
+    arr.forEach((r,i)=>{const div=document.createElement('div');div.className='statline';
+      div.innerHTML=`<span>${medals[i]||'  '} ${escapeHtml(r.name)}</span><b>${r.tot} / 301</b>`;wrap.appendChild(div);});
   } else {
     if(G.endReason==='checkout')sub=G.start+' → 0';
     else if(G.endReason==='turns')sub='Limite de '+G.maxTurns+' tours atteinte — plus petit score restant';
@@ -1606,6 +1726,36 @@ function botBatailleTarget(pos){
     if(remaining.length){const c=remaining[0];const req=remaining.length===1?sinkMinMult(ship.type,G.bdiff):1;return {num:c,mult:req};}}
   return {num:20,mult:1};
 }
+// Une fléchette qui vaut exactement v points (préfère le simple), ou null si impossible.
+function dartForPoints(v){
+  if(v===25)return {num:25,mult:1};
+  if(v===50)return {num:25,mult:2};
+  for(const m of [1,2,3]){if(v%m===0){const num=v/m;if(num>=1&&num<=20)return {num,mult:m};}}
+  return null;
+}
+function botElimTarget(pos){
+  const lvl=G.players[G.order[pos]].level||'confirme';
+  const smart={debutant:0.35,confirme:0.7,expert:0.95}[lvl];
+  const comp=elimCompute(true); // inclut les fléchettes déjà lancées ce tour
+  const myTotal=comp.totals[pos];
+  const need=ELIM_TARGET-myTotal;
+  // 1) finir sur 301 pile si une fléchette suffit
+  if(need>=1&&need<=60){const f=dartForPoints(need);if(f&&Math.random()<smart)return f;}
+  // 2) malin : tomber pile sur le total d'un adversaire pour l'éjecter (le plus haut d'abord)
+  if(Math.random()<smart){
+    let best=null;
+    for(let q=0;q<G.n;q++){if(q===pos)continue;const v=comp.totals[q];
+      if(v<=myTotal||v>=ELIM_TARGET)continue;const diff=v-myTotal;if(diff<1||diff>60)continue;
+      const d=dartForPoints(diff);if(!d)continue;if(!best||v>best.v)best={v,d};}
+    if(best)return best.d;
+  }
+  // 3) sinon avancer vers 301 sans dépasser
+  const cand=(lvl==='debutant')
+    ? [20,19,18,17,16,15,10,9,8,7,5,3,2,1].map(n=>({num:n,mult:1}))
+    : [{num:20,mult:3},{num:19,mult:3},{num:18,mult:3},{num:20,mult:2},{num:20,mult:1},{num:19,mult:1},{num:15,mult:1},{num:10,mult:1},{num:5,mult:1},{num:3,mult:1},{num:2,mult:1},{num:1,mult:1}];
+  for(const c of cand){if(myTotal+c.num*c.mult<=ELIM_TARGET)return c;}
+  return {num:0,mult:1};
+}
 function delay(ms){return new Promise(r=>setTimeout(r,ms));}
 function maybeBotTurn(){if(botBusy||!G||G.finished)return;if(curIsBot())botPlayTurn();}
 async function botPlayTurn(){
@@ -1619,6 +1769,7 @@ async function botPlayTurn(){
     if(G.type==='cricket'){const st=cricketCompute(true);target=botCricketTarget(pos,st.marks,st.scores,lvl);}
     else if(G.type==='siege'){target=botSiegeTarget(pos);}
     else if(G.type==='bataille'){target=botBatailleTarget(pos);}
+    else if(G.type==='elim'){target=botElimTarget(pos);}
     else{const live=remainingFor(pos)-turnSum(G.current);target=botPickTarget(live,G.out,lvl);}
     const actual=botSimulate(target,lvl);
     _fromBot=true;G.mod=actual.mult||1;pressNum(actual.num);_fromBot=false;
@@ -1693,6 +1844,7 @@ function syncLobbyConfigUI(){
   document.querySelectorAll('[data-group="rtype"] .chip').forEach(c=>c.classList.toggle('on',c.dataset.val===val));
   document.getElementById('rOutRow').style.display=(gt==='x01')?'block':'none';
   document.getElementById('rVariantRow').style.display=(gt==='cricket')?'block':'none';
+  document.getElementById('rElimRow').style.display=(gt==='elim')?'block':'none';
   document.getElementById('rsdiffRow').style.display=(gt==='siege')?'block':'none';
   document.getElementById('rbdiffRow').style.display=(gt==='bataille')?'block':'none';
   const usesTurns=(gt!=='siege'&&gt!=='bataille');
@@ -1726,6 +1878,7 @@ function hostStart(){
      players,order:ord,n:ord.length,committed:[],current:[],mod:1,finished:false,winnerPos:null,endReason:null,remote:true};
   if(G.type==='siege'){G.castles=G.order.map(()=>genCastle(settings.sdiff));window._siegePrevHp=null;siegeShow=null;}
   if(G.type==='bataille'){G.fleets=G.order.map(()=>genFleet());window._batPrevSunk=null;}
+  if(G.type==='elim'){G.start=ELIM_TARGET;G.elimMode=settings.emode;}
   go(G.type==='cricket'?'cricket':(G.type==='siege'?'siege':(G.type==='bataille'?'bataille':'game')));render();
   startMedia();
 }
