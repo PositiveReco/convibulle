@@ -54,6 +54,9 @@
   .row{display:flex;gap:8px;}
   .chip{flex:1;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 6px;text-align:center;font-weight:700;font-size:14px;cursor:pointer;}
   .chip.on{background:rgba(230,204,126,.16);border-color:var(--champ);color:var(--champ-bright);}
+  /* Type de jeu : beaucoup de choix -> on passe à la ligne quand ça déborde */
+  [data-group="start"],[data-group="rtype"]{flex-wrap:wrap;}
+  [data-group="start"] .chip,[data-group="rtype"] .chip{flex:1 1 28%;min-width:92px;}
 
   .stepper{display:flex;align-items:center;justify-content:space-between;background:var(--card);border:1px solid var(--champ-deep);border-radius:12px;padding:6px 12px;}
   .stepper .b{width:40px;height:40px;border-radius:10px;background:var(--card2);border:1px solid var(--line);font-size:24px;font-weight:800;color:var(--champ-bright);cursor:pointer;}
@@ -391,7 +394,7 @@
         <a class="cb-foot-beer" href="https://buymeacoffee.com/jeremycesar" target="_blank" rel="noopener noreferrer">🥂 Offrir une petite coupe</a>
         <a class="cb-foot-mail" href="mailto:positivereco.app@gmail.com?subject=Un%20petit%20mot%20pour%20ConviBulle%20%F0%9F%8E%AF">💌 Écrire un mot</a>
       </div>
-      <p class="cb-foot-ver">ConviBulle v1.10.0 · créé par Jeremy <span class="cb-heart">♥</span></p>
+      <p class="cb-foot-ver">ConviBulle v1.10.1 · créé par Jeremy <span class="cb-heart">♥</span></p>
     </footer>
   </section>
 
@@ -419,7 +422,7 @@
         <div class="chip on" data-val="9">9 trous</div>
         <div class="chip" data-val="18">18 trous</div>
       </div>
-      <div class="muted" style="font-size:11px;margin-top:5px;">Score le plus bas gagne (par 3 par trou). « Parcours » : vise le numéro du trou — triple = eagle, double = birdie, simple = par, raté = bogey. « Approche » : atteins le score cible en 1 fléchette (eagle), 2 (birdie) ou 3 (par), sinon bogey.</div>
+      <div class="muted" style="font-size:11px;margin-top:5px;">Score le plus bas gagne (par 3 par trou). « Parcours » : vise le numéro du trou, les touches se cumulent — 3 (ou un triple) = eagle, 2 (ou un double) = birdie, 1 = par, 0 = bogey. « Approche » : atteins le score cible en 1 fléchette (eagle), 2 (birdie) ou 3 (par), sinon bogey.</div>
     </div>
     <div id="elimRow" style="display:none;">
       <div class="field-label">Mode d'éjection</div>
@@ -1262,7 +1265,8 @@ function evalElim(){
 function genGolfCourse(holes,mode){
   const course=[];
   if(mode==='approche'){
-    const pool=[16,18,20,24,28,32,36,40,45,48,50,54,57,60,66,72,75,80,90];
+    // Cibles atteignables en une seule fléchette (eagle possible partout), max 60
+    const pool=[12,16,18,20,21,22,24,26,28,30,32,33,36,38,40,42,45,48,50,51,54,57,60];
     for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
     for(let h=0;h<holes;h++)course.push({kind:'score',target:pool[h%pool.length]});
     return course;
@@ -1282,12 +1286,11 @@ function golfHoleStrokes(hole,darts){
     let run=0;for(let k=0;k<darts.length;k++){run+=dartPoints(darts[k]);if(run===hole.target)return k+1;if(run>hole.target)return 4;}
     return 4;
   }
-  if(hole.kind==='bull'){
-    let best=4;for(const d of darts){if(d.num===25)best=Math.min(best,d.mult===2?2:3);}
-    return best;
-  }
-  let best=4;for(const d of darts){if(d.num===hole.target)best=Math.min(best,4-d.mult);}
-  return best;
+  // Parcours & Bull : on CUMULE les touches sur le bon numéro (2 = double/birdie, 3+ = triple/eagle)
+  const tnum=hole.kind==='bull'?25:hole.target;
+  let w=0;for(const d of darts){if(d.num===tnum)w+=d.mult;}
+  w=Math.min(w,3);
+  return w>=3?1:w===2?2:w===1?3:4;
 }
 // Dérive la carte complète : coups par joueur/trou, totaux, écart au par.
 function golfCompute(){
